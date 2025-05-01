@@ -72,7 +72,7 @@ exports.registerUser = async (req, res, next) => {
         await user.save();
         console.log(`User ${user.email} created successfully with ID: ${user._id}`);
 
-        const verificationUrl = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+        const verificationUrl = `${process.env.CLIENT_URL}/api/auth/verify-email/${verificationToken}`;
         const emailMessage = `
           <h1>Welcome to the University Platform!</h1>
           <p>Thanks for signing up, ${user.name}.</p>
@@ -157,7 +157,15 @@ exports.loginUser = async (req, res, next) => {
 
       console.log(`User ${user.email} logged in successfully.`);
 
-      res.status(200).json({
+      const cookieOptions = {
+        expires: new Date(Date.now() + parseInt(process.env.JWT_COOKIE_EXPIRES_IN_DAYS || '1', 10) * 24 * 60 * 60 * 1000),
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+      };
+
+      res.status(200)
+        .cookie('token', token, cookieOptions)
+        .json({
           success: true,
           token: token,
           user: {
