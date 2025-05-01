@@ -2,6 +2,7 @@ const User = require('../models/User');
 const sendEmail = require('../utils/emailSender');
 const crypto = require('crypto');
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
+const jwt = require('jsonwebtoken');
 
 exports.registerUser = async (req, res, next) => {
     const { name, email, password, role, university, department, faculty, studyLevel, gender, phoneNumber } = req.body;
@@ -113,6 +114,65 @@ exports.registerUser = async (req, res, next) => {
          // TODO: Implement Cloudinary cleanup on registration failure if necessary
         next(error);
     }
+};
+
+exports.loginUser = async (req, res, next) => {
+  const { email, password } = req.body;
+
+  try {
+      const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+
+      if (!user) {
+          return res.status(401).json({ success: false, error: 'Invalid credentials' });
+      }
+
+      if (user.accountStatus !== 'active') {
+          let errorMessage = 'Account is not active.';
+          if (user.accountStatus === 'waitVerification') {
+              errorMessage = 'Account not verified. Please check your email for the verification link.';
+          } else if (user.accountStatus === 'inactive') {
+              errorMessage = 'Your account is currently inactive. Please contact support.';
+          } else if (user.accountStatus === 'banned') {
+              errorMessage = 'Your account has been banned. Please contact support.';
+          }
+          return res.status(403).json({ success: false, error: errorMessage });
+      }
+
+      const isMatch = await user.comparePassword(password);
+
+      if (!isMatch) {
+          return res.status(401).json({ success: false, error: 'Invalid credentials' });
+      }
+
+      const payload = {
+          id: user._id, 
+          role: user.role
+      };
+
+      const token = jwt.sign(
+          payload,
+          process.env.JWT_SECRET,
+          { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+      );
+
+      console.log(`User ${user.email} logged in successfully.`);
+
+      res.status(200).json({
+          success: true,
+          token: token,
+          user: {
+              id: user._id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              profilePicUrl: user.profilePicUrl
+          }
+      });
+
+  } catch (error) {
+      console.error("Login Error:", error);
+      next(error);
+  }
 };
 
 exports.verifyEmail = async (req, res, next) => {

@@ -68,7 +68,7 @@ const userSchema = new mongoose.Schema({
     passwordResetToken: String,
     passwordResetExpires: Date,
     interests: [String],
-    // --- Relationships (Arrays of ObjectIds, managed via specific actions) ---
+
     createdGroups: [{ type: mongoose.Schema.ObjectId, ref: 'Group' }],
     joinedGroups: [{ type: mongoose.Schema.ObjectId, ref: 'Group' }],
     joinedChannels: [{ type: mongoose.Schema.ObjectId, ref: 'Channel' }],

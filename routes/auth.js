@@ -2,7 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const multer = require('multer');
 
-const { registerUser, verifyEmail} = require('../controllers/authController');
+const { registerUser, verifyEmail, loginUser} = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -51,6 +51,11 @@ const registrationValidationRules = [
     body('phoneNumber').optional().trim().isMobilePhone('any', { strictMode: false }).withMessage('Invalid phone number format'),
 ];
 
+const loginValidationRules = [
+  body('email', 'Please provide a valid email').isEmail().normalizeEmail(),
+  body('password', 'Password cannot be empty').notEmpty().trim(),
+];
+
 
 // --- Authentication Routes ---
 
@@ -65,6 +70,13 @@ router.post(
     registerUser
 );
 
-router.get('/verify-email/:token', verifyEmail);
+router.get('/verify-email/:token', verifyEmail)
+
+router.post(
+  '/login',
+  loginValidationRules,
+  handleValidationErrors,   
+  loginUser
+);
 
 module.exports = router;
