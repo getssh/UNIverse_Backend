@@ -4,6 +4,7 @@ const path = require('path');
 const { body, param, validationResult } = require('express-validator');
 
 const { createPost, updatePost, deletePost, getPosts, getPostById, likePost } = require('../controllers/postController');
+const { createComment, getCommentsForPost } = require('../controllers/commentController');
 const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -29,6 +30,12 @@ const upload = multer({
         fileSize: 15 * 1024 * 1024
     }
 });
+
+const createCommentValidation = [
+  body('content', 'Comment content cannot be empty').trim().notEmpty(),
+  body('content', 'Comment content cannot exceed 1000 characters').isLength({ max: 1000 }),
+  body('parentCommentId').optional({ nullable: true }).isMongoId().withMessage('Invalid parent comment ID format')
+];
 
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
@@ -89,5 +96,19 @@ router.put(
   handleValidationErrors,
   likePost
 );
+
+router.route('/:postId/comments')
+    .post(
+        protect,
+        postIdValidation,
+        createCommentValidation,
+        handleValidationErrors,
+        createComment
+    )
+    .get(
+        postIdValidation,
+        handleValidationErrors,
+        getCommentsForPost
+    );
 
 module.exports = router;
