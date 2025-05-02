@@ -191,3 +191,50 @@ exports.deletePost = async (req, res, next) => {
       next(error);
   }
 };
+
+exports.getPosts = async (req, res, next) => {
+  try {
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 10;
+      const skip = (page - 1) * limit;
+
+      let queryFilter = {};
+      if (req.query.groupId) {
+          queryFilter.group = req.query.groupId;
+      } else if (req.query.channelId) {
+          queryFilter.channel = req.query.channelId;
+      } else if (req.query.userId) {
+          queryFilter.createdBy = req.query.userId;
+      } else {
+          // Default: show all if no filter specified?
+      }
+
+      const posts = await Post.find(queryFilter)
+          .populate('createdBy', 'name profilePicUrl')
+          .populate('group', 'name') //populate group and channel names, can be deleted if not necessary 
+          .populate('channel', 'name')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean();
+
+      const totalPosts = await Post.countDocuments(queryFilter);
+      const totalPages = Math.ceil(totalPosts / limit);
+
+      res.status(200).json({
+          success: true,
+          count: posts.length,
+          pagination: {
+              totalPosts,
+              totalPages,
+              currentPage: page,
+              limit
+          },
+          data: posts
+      });
+
+  } catch (error) {
+      console.error("Error getting posts:", error);
+      next(error);
+  }
+};

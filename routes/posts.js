@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const { body, param, validationResult } = require('express-validator');
 
-const { createPost, updatePost, deletePost } = require('../controllers/postController');
+const { createPost, updatePost, deletePost, getPosts } = require('../controllers/postController');
 const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -71,5 +71,7 @@ router.delete(
   handleValidationErrors,
   deletePost
 );
+
+router.get('/', protect, getPosts); //shuld this be public, or keep protected?
 
 module.exports = router;
