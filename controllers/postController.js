@@ -282,35 +282,35 @@ exports.likePost = async (req, res, next) => {
 
       const isLiked = post.likes.some(likeUserId => likeUserId.equals(userId));
 
-      let updateOperation;
       let message;
 
       if (isLiked) {
-          updateOperation = { $pull: { likes: userId } };
+          post.likes.pull(userId);
           message = 'Post unliked successfully.';
           console.log(`User ${userId} unliking post ${postId}`);
       } else {
-          updateOperation = { $addToSet: { likes: userId } };
+          post.likes.addToSet(userId);
           message = 'Post liked successfully.';
           console.log(`User ${userId} liking post ${postId}`);
       }
 
-      
-      const updatedPost = await Post.findByIdAndUpdate(
-          postId,
-          updateOperation,
-          { new: true }
-      );
-      if (!updatedPost) { 
-           return res.status(404).json({ success: false, error: `Post not found during update: ${postId}` });
-      }
+      await post.save();
+      console.log(`Post ${postId} likes updated in DB.`);
 
-       await post.populate('createdBy', 'name profilePicUrl');
+
+      const updatedPost = await Post.findById(postId)
+                                    .populate('createdBy', 'name profilePicUrl')
+                                    .lean();
+
+      if (!updatedPost) {
+           console.error(`Failed to refetch post ${postId} after like/unlike save.`);
+           return res.status(404).json({ success: false, error: `Post not found after update operation.` });
+      }
 
       res.status(200).json({
           success: true,
           message: message,
-          data: post
+          data: updatedPost
       });
 
   } catch (error) {
