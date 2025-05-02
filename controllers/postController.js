@@ -238,3 +238,83 @@ exports.getPosts = async (req, res, next) => {
       next(error);
   }
 };
+
+
+exports.getPostById = async (req, res, next) => {
+  const { postId } = req.params;
+
+  try {
+      const post = await Post.findById(postId)
+          .populate('createdBy', 'name profilePicUrl email')
+          .populate('group')
+          .populate('channel')
+          .lean();
+
+      if (!post) {
+          return res.status(404).json({ success: false, error: `Post not found with ID: ${postId}` });
+      }
+
+      res.status(200).json({
+          success: true,
+          data: post
+      });
+
+  } catch (error) {
+      if (error.name === 'CastError') {
+           return res.status(404).json({ success: false, error: `Post not found with ID: ${postId}` });
+      }
+      console.error(`Error getting post ${postId}:`, error);
+      next(error);
+  }
+};
+
+
+exports.likePost = async (req, res, next) => {
+  const { postId } = req.params;
+  const userId = req.user.id;
+
+  try {
+      const post = await Post.findById(postId);
+
+      if (!post) {
+          return res.status(404).json({ success: false, error: `Post not found with ID: ${postId}` });
+      }
+
+      const isLiked = post.likes.some(likeUserId => likeUserId.equals(userId));
+
+      let updateOperation;
+      let message;
+
+      if (isLiked) {
+          updateOperation = { $pull: { likes: userId } };
+          message = 'Post unliked successfully.';
+          console.log(`User ${userId} unliking post ${postId}`);
+      } else {
+          updateOperation = { $addToSet: { likes: userId } };
+          message = 'Post liked successfully.';
+          console.log(`User ${userId} liking post ${postId}`);
+      }
+
+      
+      const updatedPost = await Post.findByIdAndUpdate(
+          postId,
+          updateOperation,
+          { new: true }
+      );
+      if (!updatedPost) { 
+           return res.status(404).json({ success: false, error: `Post not found during update: ${postId}` });
+      }
+
+       await post.populate('createdBy', 'name profilePicUrl');
+
+      res.status(200).json({
+          success: true,
+          message: message,
+          data: post
+      });
+
+  } catch (error) {
+      console.error(`Error liking/unliking post ${postId}:`, error);
+      next(error);
+  }
+};
