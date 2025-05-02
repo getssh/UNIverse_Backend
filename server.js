@@ -13,6 +13,7 @@ connectDB();
 
 
 const authRoutes = require('./routes/auth');
+const postRoutes = require('./routes/posts'); 
 
 const app = express();
 
@@ -29,6 +30,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 app.use('/api/auth', authRoutes);
+app.use('/api/posts', postRoutes);
 
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the University Platform API!' });
