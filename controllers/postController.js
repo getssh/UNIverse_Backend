@@ -1,6 +1,6 @@
 const Post = require('../models/Post');
-const Group = require('../models/Group');
-const Channel = require('../models/Channel');
+// const Group = require('../models/Group');
+// const Channel = require('../models/Channel');
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
 
@@ -8,7 +8,7 @@ const { getResourceTypeFromMime } = require('../utils/fileUtils');
 exports.createPost = async (req, res, next) => {
     const { content, groupId, channelId } = req.body;
     const userId = req.user.id;
-    const files = req.files?.postFiles;
+    const files = req.files;
 
     if (!content && (!files || files.length === 0)) {
         return res.status(400).json({ success: false, error: 'Post must have content or at least one file.' });
@@ -17,23 +17,24 @@ exports.createPost = async (req, res, next) => {
         return res.status(400).json({ success: false, error: 'A post cannot belong to both a group and a channel.' });
     }
 
-    try {
-        if (groupId) {
-            const groupExists = await Group.findById(groupId);
-            if (!groupExists) {
-                return res.status(404).json({ success: false, error: `Group not found with ID: ${groupId}` });
-            }
-            // Optional TODO: Check if req.user.id is a member of groupExists
-        }
-        if (channelId) {
-            const channelExists = await Channel.findById(channelId);
-            if (!channelExists) {
-                return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
-            }
-            // Optional TODO: Check if req.user.id is allowed to post in channelExists
-        }
+    const uploadedFilesData = [];
 
-        const uploadedFilesData = [];
+    try {
+        // if (groupId) {
+        //     const groupExists = await Group.findById(groupId);
+        //     if (!groupExists) {
+        //         return res.status(404).json({ success: false, error: `Group not found with ID: ${groupId}` });
+        //     }
+        //     // Optional TODO: Check if req.user.id is a member of groupExists
+        // }
+        // if (channelId) {
+        //     const channelExists = await Channel.findById(channelId);
+        //     if (!channelExists) {
+        //         return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
+        //     }
+        //     // Optional TODO: Check if req.user.id is allowed to post in channelExists
+        // }
+
         if (files && files.length > 0) {
             console.log(`Processing ${files.length} file(s) for upload...`);
             const uploadPromises = files.map(async (file) => {
@@ -47,11 +48,14 @@ exports.createPost = async (req, res, next) => {
                         'post_files', //folder for post files(update later if we need to separte folders for group and channel posts)
                         resourceType 
                     );
-                    return {
-                        url: result.secure_url,
-                        publicId: result.public_id,
-                        resourceType: resourceType
+                    
+                    const fileData = {
+                      url: result.secure_url,
+                      publicId: result.public_id,
+                      resourceType: resourceType
                     };
+
+                    return fileData;
                 } catch (uploadError) {
                     console.error(`Failed to upload ${file.originalname}:`, uploadError);
   
