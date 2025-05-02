@@ -42,12 +42,12 @@ const registrationValidationRules = [
     body('name', 'Name is required').trim().notEmpty().escape(),
     body('email', 'Please include a valid email').isEmail().normalizeEmail(),
     body('password', 'Password must be at least 8 characters').isLength({ min: 8 }).trim(),
-    body('role', 'Role must be either student or teacher').isIn(['student', 'teacher']),
+    body('role', 'Role must be either student or teacher').isIn(['student', 'teacher', 'admin']), //Todo remove admin after testing? if we create admin manually
     body('university').optional().isMongoId().withMessage('Invalid University ID format'),
     body('department').optional().trim().escape(),
     body('faculty').optional().trim().escape(),
     body('studyLevel').optional().isIn(['undergraduate', 'graduate', 'PhD']),
-    body('gender').optional().isIn(['male', 'female', 'other']),
+    body('gender').optional().isIn(['male', 'female']),
     body('phoneNumber').optional().trim().isMobilePhone('any', { strictMode: false }).withMessage('Invalid phone number format'),
 ];
 
