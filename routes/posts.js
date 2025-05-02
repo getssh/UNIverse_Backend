@@ -1,8 +1,9 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const { body, param, validationResult } = require('express-validator');
 
-const { createPost } = require('../controllers/postController');
+const { createPost, updatePost, deletePost } = require('../controllers/postController');
 const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -29,12 +30,46 @@ const upload = multer({
     }
 });
 
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (errors.isEmpty()) return next();
+  const extractedErrors = errors.array().map(err => ({ field: err.param || err.location, message: err.msg }));
+  return res.status(422).json({ success: false, errors: extractedErrors });
+};
+
+const postIdValidation = [
+  param('postId', 'Invalid Post ID format').isMongoId()
+];
+
+const updatePostValidationRules = [
+  body('content', 'Content cannot be empty').trim().notEmpty(),
+  body('content', 'Content cannot exceed 2000 characters').isLength({ max: 2000 })
+];
+
+
 
 router.post(
     '/',
     protect,
     upload.array('postFiles', 5),
     createPost
+);
+
+router.put(
+  '/:postId',
+  protect,
+  postIdValidation,
+  updatePostValidationRules,
+  handleValidationErrors,
+  updatePost
+);
+
+router.delete(
+  '/:postId',
+  protect,
+  postIdValidation,
+  handleValidationErrors,
+  deletePost
 );
 
 module.exports = router;

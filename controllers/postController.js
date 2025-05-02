@@ -3,6 +3,7 @@ const Post = require('../models/Post');
 // const Channel = require('../models/Channel');
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
+const cloudinary = require('../config/cloudinary');
 
 
 exports.createPost = async (req, res, next) => {
@@ -107,4 +108,86 @@ exports.createPost = async (req, res, next) => {
 
         next(error);
     }
+};
+
+exports.updatePost = async (req, res, next) => {
+  const { postId } = req.params;
+  const { content } = req.body;
+  const userId = req.user.id;
+
+  if (content === undefined || content === null || content.trim() === '') {
+      // Allow empty string if user intentionally clears content?
+
+      return res.status(400).json({ success: false, error: 'Post content cannot be empty for an update.' });
+  }
+   if (content.length > 2000) {
+      return res.status(400).json({ success: false, error: 'Post content cannot exceed 2000 characters.' });
+  }
+
+
+  try {
+      const post = await Post.findById(postId);
+
+      if (!post) {
+          return res.status(404).json({ success: false, error: `Post not found with ID: ${postId}` });
+      }
+
+      if (post.createdBy.toString() !== userId) {
+          return res.status(403).json({ success: false, error: 'User not authorized to update this post' }); // 403 Forbidden
+      }
+
+      post.content = content.trim();
+      post.isEdited = true;
+
+      const updatedPost = await post.save();
+
+      await updatedPost.populate('createdBy', 'name profilePicUrl');
+
+      console.log(`Post ${postId} updated successfully by user ${userId}`);
+
+      res.status(200).json({
+          success: true,
+          data: updatedPost
+      });
+
+  } catch (error) {
+      console.error(`Error updating post ${postId}:`, error);
+      next(error);
+  }
+};
+
+
+exports.deletePost = async (req, res, next) => {
+  const { postId } = req.params;
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  try {
+      const post = await Post.findById(postId);
+
+      if (!post) {
+          return res.status(404).json({ success: false, error: `Post not found with ID: ${postId}` });
+      }
+
+      const isOwner = post.createdBy.toString() === userId;
+      const isAdmin = userRole === 'admin';
+
+      if (!isOwner && !isAdmin) {
+          return res.status(403).json({ success: false, error: 'User not authorized to delete this post' });
+      }
+
+      const deletedPost = await Post.findByIdAndDelete(postId);
+
+      if (!deletedPost) {
+            return res.status(404).json({ success: false, error: `Post not found with ID: ${postId} during delete attempt.` });
+      }
+
+      console.log(`Post ${postId} deleted successfully by user ${userId} (Role: ${userRole})`);
+
+      res.status(200).json({ success: true, message: 'Post deleted successfully.' });
+
+  } catch (error) {
+      console.error(`Error deleting post ${postId}:`, error);
+      next(error);
+  }
 };
