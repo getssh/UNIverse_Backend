@@ -182,3 +182,99 @@ exports.getChannelById = async (req, res, next) => {
         data: channel
     });
 };
+
+exports.updateChannel = async (req, res, next) => {
+    const { channelId } = req.params;
+    const { name, description, channelType, isPublic, admin } = req.body;
+    const profilePicFile = req.files?.profilePic?.[0];
+    const userId = req.user.id;
+
+    let channel = await Channel.findById(channelId);
+    if (!channel) {
+        return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
+    }
+
+    let profilePicUpdate = {};
+    let oldPublicId = channel.profilePic?.publicId;
+
+    if (profilePicFile) {
+        try {
+            console.log("Uploading new Channel Profile Picture...");
+            const resourceType = getResourceTypeFromMime(profilePicFile.mimetype);
+            if (resourceType !== 'image') {
+                return res.status(400).json({ success: false, error: 'Channel profile picture must be an image file.' });
+            }
+            const result = await uploadToCloudinary(
+                profilePicFile.buffer,
+                profilePicFile.originalname,
+                'channel_profile_pics',
+                'image'
+            );
+            profilePicUpdate = { url: result.secure_url, publicId: result.public_id };
+             console.log("New Channel Profile Picture Uploaded:", profilePicUpdate.url);
+        } catch (uploadError) {
+             console.error("Channel profile pic update failed:", uploadError);
+             return res.status(500).json({ success: false, error: `Failed to upload profile picture: ${uploadError.message}` });
+        }
+    }
+
+    const updates = {};
+    if (name !== undefined) { updates.name = name.trim(); }
+    if (description !== undefined) updates.description = description.trim();
+    if (channelType !== undefined) {
+         const allowedTypes = Channel.schema.path('channelType').enumValues;
+         if (!allowedTypes.includes(channelType)) {
+             return res.status(400).json({ success: false, error: `Invalid channel type. Allowed types: ${allowedTypes.join(', ')}` });
+         }
+         updates.channelType = channelType;
+    }
+    if (isPublic !== undefined) updates.isPublic = isPublic;
+    if (admin !== undefined) {
+         updates.admin = admin;
+    }
+    if (profilePicUpdate.url) {
+        updates.profilePic = profilePicUpdate;
+    }
+
+    if (Object.keys(updates).length === 0 && !profilePicFile) {
+        return res.status(400).json({ success: false, error: 'No update data provided.' });
+    }
+
+    const updatedChannel = await Channel.findByIdAndUpdate(channelId, updates, {
+        new: true,
+        runValidators: true
+    })
+    .populate('admin', 'name profilePicUrl')
+    .populate('university', 'name');
+
+    if (!updatedChannel) {
+         return res.status(404).json({ success: false, error: `Channel not found during update.` });
+    }
+
+     if (profilePicUpdate.url && oldPublicId && oldPublicId !== profilePicUpdate.publicId) {
+         console.log(`Deleting old channel profile pic: ${oldPublicId}`);
+         cloudinary.uploader.destroy(oldPublicId, { resource_type: 'image' })
+             .catch(err => console.error(`Failed to delete old Cloudinary file ${oldPublicId}:`, err));
+     }
+
+    console.log(`Channel ${channelId} updated successfully by user ${userId}`);
+    res.status(200).json({
+        success: true,
+        data: updatedChannel
+    });
+};
+
+exports.deleteChannel = async (req, res, next) => {
+    const { channelId } = req.params;
+    const userId = req.user.id;
+
+     const channel = await Channel.findById(channelId);
+     if (!channel) {
+         return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
+     }
+
+    await Channel.findByIdAndDelete(channelId);
+
+    console.log(`Channel ${channelId} deleted successfully by user ${userId}`);
+    res.status(200).json({ success: true, message: 'Channel deleted successfully.' });
+};
