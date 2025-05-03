@@ -334,3 +334,44 @@ exports.leaveChannel = async (req, res, next) => {
     console.log(`User ${userId} left channel ${channelId}`);
     res.status(200).json({ success: true, message: 'Successfully left channel.' });
 };
+
+exports.getChannelMembers = async (req, res, next) => {
+    const { channelId } = req.params;
+    const userId = req.user.id;
+
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
+
+     const channel = await Channel.findById(channelId).select('members admin isPublic university').lean();
+     if (!channel) {
+         return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
+     }
+
+     const isMember = channel.members.some(memberId => memberId.equals(userId));
+     const isAdmin = channel.admin && channel.admin.equals(userId);
+     const isSystemAdmin = req.user.role === 'admin';
+
+     if (!isAdmin && !isMember && !channel.isPublic && !isSystemAdmin) {
+        return res.status(403).json({ success: false, error: 'Not authorized to view members of this channel.' });
+     }
+
+     const memberIds = channel.members;
+
+     const members = await User.find({ '_id': { $in: memberIds } })
+         .select('name profilePicUrl email')
+         .sort({ name: 1 })
+         .skip(skip)
+         .limit(limit)
+         .lean();
+
+     const totalMembers = memberIds.length;
+     const totalPages = Math.ceil(totalMembers / limit);
+
+     res.status(200).json({
+         success: true,
+         count: members.length,
+         pagination: { totalMembers, totalPages, currentPage: page, limit },
+         data: members
+     });
+};
