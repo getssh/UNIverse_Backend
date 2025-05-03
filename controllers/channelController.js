@@ -153,3 +153,32 @@ exports.getChannels = async (req, res, next) => {
     });
 };
 
+
+exports.getChannelById = async (req, res, next) => {
+    const { channelId } = req.params;
+    const userId = req.user.id;
+    const userUniversityId = req.user.university?.toString(); 
+
+    const channel = await Channel.findById(channelId)
+        .populate('admin', 'name profilePicUrl email')
+        .populate('university', 'name location')
+        .lean();
+
+    if (!channel) {
+        return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
+    }
+
+    const isMember = channel.members.some(memberId => memberId.equals(userId));
+    const isCorrectUniversity = channel.university._id.toString() === userUniversityId;
+
+    if (!channel.isPublic && !isMember) {
+         return res.status(403).json({ success: false, error: 'You are not authorized to view this private channel.' });
+    }
+
+     channel.memberCount = channel.members ? channel.members.length : 0;
+
+    res.status(200).json({
+        success: true,
+        data: channel
+    });
+};
