@@ -79,3 +79,77 @@ exports.createChannel = async (req, res, next) => {
         data: newChannel
     });
 };
+
+exports.getChannels = async (req, res, next) => {
+    const userId = req.user.id;
+    const userUniversityId = req.user.university;
+
+    const filter = {};
+
+    let targetUniversityId = req.query.universityId
+    if (targetUniversityId) {
+        if (!mongoose.Types.ObjectId.isValid(targetUniversityId)) {
+            return res.status(400).json({ success: false, error: 'Invalid University ID format.' });
+        }
+        filter.university = targetUniversityId;
+    }
+
+    if (req.query.channelType) {
+        const allowedTypes = Channel.schema.path('channelType').enumValues;
+        if (!allowedTypes.includes(req.query.channelType)) {
+             return res.status(400).json({ success: false, error: `Invalid channel type filter. Allowed: ${allowedTypes.join(', ')}` });
+        }
+        filter.channelType = req.query.channelType;
+    }
+
+    if (req.query.member === 'true') {
+        filter.members = userId;
+    } else if (req.query.member === 'false'){
+         filter.members = { $ne: userId };
+    }
+
+    if (req.query.member !== 'true') {
+         filter.$or = [
+             { isPublic: true },
+             { members: userId }
+         ];
+    }
+
+    let sort = { createdAt: -1 };
+    if (req.query.rank === 'members') {
+      //Todo add Proper ranking with aggregation (for now used name as a placeholder)
+        console.warn("Ranking by member count requested");
+        sort = { name: 1 };
+    } else if (req.query.sort === 'name') {
+         sort = { name: 1 };
+    } else if (req.query.sort === 'oldest') {
+        sort = { createdAt: 1 };
+    }
+
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const channels = await Channel.find(filter)
+        .populate('admin', 'name profilePicUrl')
+        .populate('university', 'name')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    channels.forEach(channel => {
+         channel.memberCount = channel.members ? channel.members.length : 0;
+    });
+
+    const totalChannels = await Channel.countDocuments(filter);
+    const totalPages = Math.ceil(totalChannels / limit);
+
+    res.status(200).json({
+        success: true,
+        count: channels.length,
+        pagination: { totalChannels, totalPages, currentPage: page, limit },
+        data: channels
+    });
+};
+
