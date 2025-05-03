@@ -278,3 +278,59 @@ exports.deleteChannel = async (req, res, next) => {
     console.log(`Channel ${channelId} deleted successfully by user ${userId}`);
     res.status(200).json({ success: true, message: 'Channel deleted successfully.' });
 };
+
+exports.joinChannel = async (req, res, next) => {
+    const { channelId } = req.params;
+    const userId = req.user.id;
+    const userUniversityId = req.user.university?.toString();
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+        return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
+    }
+
+     if (!channel.isPublic && userUniversityId !== channel.university.toString()) {
+        return res.status(403).json({ success: false, error: 'Cannot join private channels outside your university.' });
+     }
+
+    const updatedChannel = await Channel.findByIdAndUpdate(
+        channelId,
+        { $addToSet: { members: userId } },
+        { new: true }
+    ).lean();
+
+    if (!updatedChannel) {
+        return res.status(404).json({ success: false, error: `Channel not found during join attempt.` });
+    }
+
+
+    console.log(`User ${userId} joined channel ${channelId}`);
+    res.status(200).json({ success: true, message: 'Successfully joined channel.' });
+};
+
+exports.leaveChannel = async (req, res, next) => {
+    const { channelId } = req.params;
+    const userId = req.user.id;
+
+     const channel = await Channel.findById(channelId);
+     if (!channel) {
+         return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
+     }
+
+     if (channel.admin && channel.admin.equals(userId)) {
+         return res.status(400).json({ success: false, error: 'Channel admin cannot leave the channel directly. Transfer admin role first.' });
+     }
+
+    const updateResult = await Channel.findByIdAndUpdate(
+        channelId,
+        { $pull: { members: userId } },
+        { new: true }
+    );
+
+     if (!updateResult) {
+          return res.status(404).json({ success: false, error: `Channel not found during leave attempt.` });
+     }
+
+    console.log(`User ${userId} left channel ${channelId}`);
+    res.status(200).json({ success: true, message: 'Successfully left channel.' });
+};
