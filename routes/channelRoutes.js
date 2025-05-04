@@ -47,7 +47,7 @@ const channelBodyValidation = [
     body('name').optional().trim().notEmpty().withMessage('Channel name cannot be empty.')
                .isLength({ max: 100 }).withMessage('Channel name cannot exceed 100 characters.'),
     body('description').optional().trim().isLength({ max: 500 }).withMessage('Description cannot exceed 500 characters.'),
-    body('university').if(body('name').exists())
+    body('university').optional().if(body('name').exists())
                      .isMongoId().withMessage('Valid University ID is required.'),
 
     body('channelType').optional()

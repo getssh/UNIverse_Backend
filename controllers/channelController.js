@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 
 exports.createChannel = async (req, res, next) => {
     const { name, description, university, channelType, isPublic } = req.body;
-    const profilePicFile = req.files?.profilePic?.[0];
+    const profilePicFile = req.file;
     const adminUserId = req.user.id;
 
     if (!name || !university || !channelType) {
@@ -54,6 +54,7 @@ exports.createChannel = async (req, res, next) => {
             console.error("Channel profile pic upload failed:", uploadError);
             return res.status(500).json({ success: false, error: `Failed to upload profile picture: ${uploadError.message}` });
         }
+
     }
 
     const channelData = {
@@ -186,7 +187,7 @@ exports.getChannelById = async (req, res, next) => {
 exports.updateChannel = async (req, res, next) => {
     const { channelId } = req.params;
     const { name, description, channelType, isPublic, admin } = req.body;
-    const profilePicFile = req.files?.profilePic?.[0];
+    const profilePicFile = req.file;
     const userId = req.user.id;
 
     let channel = await Channel.findById(channelId);

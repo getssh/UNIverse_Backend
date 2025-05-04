@@ -133,7 +133,7 @@ exports.updatePost = async (req, res, next) => {
       }
 
       if (post.createdBy.toString() !== userId) {
-          return res.status(403).json({ success: false, error: 'User not authorized to update this post' }); // 403 Forbidden
+          return res.status(403).json({ success: false, error: 'User not authorized to update this post' });
       }
 
       post.content = content.trim();
