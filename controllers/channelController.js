@@ -230,9 +230,17 @@ exports.updateChannel = async (req, res, next) => {
          updates.channelType = channelType;
     }
     if (isPublic !== undefined) updates.isPublic = isPublic;
-    if (admin !== undefined) {
+
+    const isNewAdminMember = channel.members.some(memberId => memberId.equals(admin));
+
+    if (admin !== undefined && isNewAdminMember) {
          updates.admin = admin;
     }
+
+    if (!isNewAdminMember) {
+      return res.status(400).json({ success: false, message: 'Admin must be a member of the channel' });
+    }
+
     if (profilePicUpdate.url) {
         updates.profilePic = profilePicUpdate;
     }
