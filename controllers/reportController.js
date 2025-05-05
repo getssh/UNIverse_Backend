@@ -141,3 +141,63 @@ exports.createReport = async (req, res, next) => {
         message: `${targetType} reported successfully.`,
     });
 };
+
+exports.getReports = async (req, res, next) => {
+    const filter = {};
+    if (req.query.resolved === 'true') filter.resolved = true;
+    if (req.query.resolved === 'false') filter.resolved = false;
+    if (req.query.targetType) {
+        const allowedTypes = Report.schema.path('targetType').enumValues;
+         if (allowedTypes.includes(req.query.targetType)) {
+            filter.targetType = req.query.targetType;
+         } else {
+              return res.status(400).json({ success: false, error: `Invalid targetType filter.` });
+         }
+    }
+     if (req.query.targetId) {
+          if (mongoose.Types.ObjectId.isValid(req.query.targetId)) {
+              filter.targetId = req.query.targetId;
+          } else {
+               return res.status(400).json({ success: false, error: `Invalid targetId filter format.` });
+          }
+     }
+     if (req.query.reportedById) {
+         if (mongoose.Types.ObjectId.isValid(req.query.reportedById)) {
+             filter.reportedBy = req.query.reportedById;
+         } else {
+               return res.status(400).json({ success: false, error: `Invalid reportedById filter format.` });
+         }
+     }
+     if (req.query.resolvedById) {
+          if (mongoose.Types.ObjectId.isValid(req.query.resolvedById)) {
+              filter.resolvedBy = req.query.resolvedById;
+          } else {
+                return res.status(400).json({ success: false, error: `Invalid resolvedById filter format.` });
+          }
+     }
+
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
+
+    const sort = { resolved: 1, createdAt: -1 };
+
+    const reports = await Report.find(filter)
+        .populate('reportedBy', 'name email')
+        .populate('targetId')
+        .populate('resolvedBy', 'name email')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    const totalReports = await Report.countDocuments(filter);
+    const totalPages = Math.ceil(totalReports / limit);
+
+    res.status(200).json({
+        success: true,
+        count: reports.length,
+        pagination: { totalReports, totalPages, currentPage: page, limit },
+        data: reports
+    });
+};
