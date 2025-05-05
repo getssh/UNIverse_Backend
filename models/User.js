@@ -56,7 +56,7 @@ const userSchema = new mongoose.Schema({
     },
     accountStatus: {
         type: String,
-        enum: ['active', 'waitVerification', 'inactive', 'banned'],
+        enum: ['active', 'waitVerification', 'inactive', 'banned', 'warned'],
         default: 'waitVerification',
     },
     isEmailVerified: {
