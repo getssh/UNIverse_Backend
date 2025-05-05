@@ -105,22 +105,30 @@ router.route('/:channelId')
 
 router.route('/:channelId/update')
     .put(
-        protect,
-        authorize('admin', 'channel-admin'),
-        uploadProfilePic.single('profilePic'),
-        channelIdValidation, 
-        channelBodyValidation, 
-        handleValidationErrors,
-        updateChannel
+      protect,
+      authorize(['admin'], {
+          modelName: 'Channel',
+          paramName: 'channelId',
+          userField: 'admin'
+      }),
+      uploadProfilePic.single('profilePic'),
+      channelIdValidation,
+      channelBodyValidation,
+      handleValidationErrors,
+      updateChannel
     );
 
 router.route('/:channelId/delete') 
     .delete(
-        protect,
-        authorize('admin', 'channel-admin'),
-        channelIdValidation,
-        handleValidationErrors,
-        deleteChannel
+      protect,
+      authorize(['admin'], {
+          modelName: 'Channel',
+          paramName: 'channelId',
+          userField: 'admin'
+      }),
+      channelIdValidation,
+      handleValidationErrors,
+      deleteChannel
     );
 
 router.route('/:channelId/join')
