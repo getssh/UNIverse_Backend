@@ -77,3 +77,67 @@ const handleReportThresholds = async (targetType, targetId) => {
         console.error(`Error handling report thresholds for ${targetType} ${targetId}:`, error);
     }
 };
+
+
+exports.createReport = async (req, res, next) => {
+    const { targetType, targetId, reason } = req.body;
+    const reportedById = req.user.id;
+
+    if (!targetType || !targetId || !reason) {
+        return res.status(400).json({ success: false, error: 'Please provide targetType, targetId, and reason.' });
+    }
+    const TargetModel = getModelForTargetType(targetType);
+    if (!TargetModel) {
+        return res.status(400).json({ success: false, error: `Invalid targetType: ${targetType}` });
+    }
+    if (!mongoose.Types.ObjectId.isValid(targetId)) {
+         return res.status(400).json({ success: false, error: `Invalid targetId format.` });
+    }
+     if (reason.trim().length < 5) {
+          return res.status(400).json({ success: false, error: 'Reason must be at least 5 characters long.' });
+     }
+
+    const targetExists = await TargetModel.findById(targetId).select('_id reports');
+    if (!targetExists) {
+        return res.status(404).json({ success: false, error: `${targetType} not found with ID: ${targetId}` });
+    }
+
+    const existingReport = await Report.findOne({
+        reportedBy: reportedById,
+        targetType: targetType,
+        targetId: targetId,
+        resolved: false
+    });
+
+    if (existingReport) {
+         return res.status(409).json({ success: false, error: `You have already reported this ${targetType.toLowerCase()}.` });
+    }
+
+    const reportData = {
+        reportedBy: reportedById,
+        targetType: targetType,
+        targetId: targetId,
+        reason: reason.trim(),
+        resolved: false
+    };
+    const newReport = await Report.create(reportData);
+    console.log(`Report ${newReport._id} created by ${reportedById} for ${targetType} ${targetId}`);
+
+    if (TargetModel.schema.path('reports') instanceof mongoose.Schema.Types.Array) {
+        await TargetModel.findByIdAndUpdate(
+            targetId,
+            { $addToSet: { reports: newReport._id } },
+            { new: true, runValidators: true }
+        );
+        console.log(`Report ${newReport._id} linked to ${targetType} ${targetId}`);
+    } else {
+        console.warn(`Target model ${targetType} does not have a 'reports' array field defined in schema. Skipping link.`);
+    }
+
+    handleReportThresholds(targetType, targetId);
+
+    res.status(201).json({
+        success: true,
+        message: `${targetType} reported successfully.`,
+    });
+};
