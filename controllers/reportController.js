@@ -201,3 +201,45 @@ exports.getReports = async (req, res, next) => {
         data: reports
     });
 };
+
+exports.resolveReport = async (req, res, next) => {
+  const { reportId } = req.params;
+  const { resolved = true, actionTaken, adminNotes } = req.body;
+  const resolvedById = req.user.id;
+
+   if (actionTaken) {
+       const allowedActions = Report.schema.path('actionTaken').enumValues;
+       if (!allowedActions.includes(actionTaken)) {
+            return res.status(400).json({ success: false, error: `Invalid actionTaken value. Allowed: ${allowedActions.join(', ')}` });
+       }
+   }
+
+  const updateData = {
+      resolved: resolved,
+      resolvedBy: resolved ? resolvedById : undefined,
+      actionTaken: resolved ? actionTaken : undefined,
+      adminNotes: resolved ? adminNotes?.trim() : undefined,
+  };
+
+  const updatedReport = await Report.findByIdAndUpdate(reportId, updateData, {
+      new: true,
+      runValidators: true
+  })
+  .populate('reportedBy', 'name email')
+  .populate('targetId')
+  .populate('resolvedBy', 'name email');
+
+
+  if (!updatedReport) {
+      return res.status(404).json({ success: false, error: `Report not found with ID: ${reportId}` });
+  }
+
+  console.log(`Report ${reportId} resolved successfully by admin ${resolvedById}`);
+
+  handleReportThresholds(updatedReport.targetType, updatedReport.targetId); 
+
+  res.status(200).json({
+      success: true,
+      data: updatedReport
+  });
+};
