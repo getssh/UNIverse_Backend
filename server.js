@@ -17,6 +17,7 @@ const postRoutes = require('./routes/posts');
 const commentRoutes = require('./routes/comments');
 const universityRoutes = require('./routes/universityRoutes');
 const channelRoutes = require('./routes/channelRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/universities', universityRoutes);
 app.use('/api/channels', channelRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the University Platform API!' });

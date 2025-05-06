@@ -276,7 +276,8 @@ exports.updateChannel = async (req, res, next) => {
 exports.deleteChannel = async (req, res, next) => {
     const { channelId } = req.params;
     const userId = req.user.id;
-
+    
+    //Todo maybe handle the auth middleware here to check if the user is channel admin? fight now the middleware check for admin role
      const channel = await Channel.findById(channelId);
      if (!channel) {
          return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
