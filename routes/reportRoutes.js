@@ -69,7 +69,7 @@ router.post(
 router.get(
     '/',
     protect, 
-    authorize('admin'), 
+    authorize(['admin']), 
     getReportsQueryValidation,
     handleValidationErrors, 
     getReports 
@@ -78,7 +78,7 @@ router.get(
 router.put(
     '/:reportId/resolve', 
     protect, 
-    authorize('admin'),  
+    authorize(['admin']),  
     reportIdValidation, 
     resolveReportValidation,
     handleValidationErrors, 
