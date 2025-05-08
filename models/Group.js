@@ -82,7 +82,14 @@ const groupSchema = new mongoose.Schema(
             type: String,
             enum: ['active', 'inactive', 'archived', 'under_review'],
             default: 'active'
-        }
+        },
+        joinRequests: [
+          {
+              user: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+              requestedAt: { type: Date, default: Date.now },
+              message: { type: String, trim: true, maxlength: 200 }
+          }
+      ],
     },
     {
         timestamps: true,
@@ -97,6 +104,7 @@ groupSchema.index({ members: 1 });
 groupSchema.index({ admins: 1 });
 groupSchema.index({ tags: 1 });
 groupSchema.index({ university: 1, name: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } });
+groupSchema.index({ 'joinRequests.user': 1 });
 
 
 groupSchema.virtual('memberCount').get(function() {
