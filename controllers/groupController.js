@@ -9,6 +9,12 @@ const mongoose = require('mongoose');
 const isGroupAdmin = (group, userId) => {
   return group.admins.some(adminId => adminId.equals(userId));
 };
+const isGroupStaff = (group, userId) => {
+  const userIdStr = userId.toString();
+  const isAdmin = group.admins.some(adminId => adminId.toString() === userIdStr);
+  const isModerator = group.moderators.some(modId => modId.toString() === userIdStr);
+  return isAdmin || isModerator;
+};
 
 exports.createGroup = async (req, res, next) => {
     const { name, description, groupType, privacy, university, rules, tags } = req.body;
@@ -314,4 +320,60 @@ exports.leaveGroup = async (req, res, next) => {
   await group.save();
 
   res.status(200).json({ success: true, message: 'Successfully left the group.' });
+};
+
+exports.getJoinRequests = async (req, res, next) => {
+  const { groupId } = req.params;
+  const userId = req.user.id;
+
+  const group = await Group.findById(groupId).select('admins moderators joinRequests')
+                            .populate('joinRequests.user', 'name email profilePicUrl');
+
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+  if (!isGroupStaff(group, userId) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Not authorized to view join requests.' });
+  }
+
+  res.status(200).json({ success: true, data: group.joinRequests });
+};
+
+exports.manageJoinRequest = async (req, res, next) => {
+  const { groupId, requestId } = req.params;
+  const { action } = req.body;
+  const adminUserId = req.user.id;
+
+
+  if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ success: false, error: "Action must be 'approve' or 'reject'." });
+  }
+  if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({ success: false, error: "Invalid request user ID." });
+  }
+
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+  if (!isGroupStaff(group, adminUserId) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Not authorized to manage join requests.' });
+  }
+
+  const requestIndex = group.joinRequests.findIndex(req => req.user.equals(requestId));
+  if (requestIndex === -1) {
+      return res.status(404).json({ success: false, error: 'Join request not found.' });
+  }
+
+  if (action === 'approve') {
+      group.members.addToSet(requestId);
+      group.joinRequests.splice(requestIndex, 1);
+      await group.save();
+
+      return res.status(200).json({ success: true, message: 'Join request approved.' });
+  } else {
+      group.joinRequests.splice(requestIndex, 1);
+      await group.save();
+
+      return res.status(200).json({ success: true, message: 'Join request rejected.' });
+  }
 };
