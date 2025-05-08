@@ -6,6 +6,9 @@ const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const cloudinary = require('../config/cloudinary');
 const mongoose = require('mongoose');
 
+const isGroupAdmin = (group, userId) => {
+  return group.admins.some(adminId => adminId.equals(userId));
+};
 
 exports.createGroup = async (req, res, next) => {
     const { name, description, groupType, privacy, university, rules, tags } = req.body;
@@ -179,4 +182,70 @@ exports.getGroupById = async (req, res, next) => {
 
 
     res.status(200).json({ success: true, data: group });
+};
+
+exports.updateGroup = async (req, res, next) => {
+    const { groupId } = req.params;
+    const userId = req.user.id;
+    const { name, description, groupType, privacy, university, rules, tags } = req.body;
+    const profilePicFile = req.files?.profilePic?.[0];
+    const coverPhotoFile = req.files?.coverPhoto?.[0];
+
+    let group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+    if (!isGroupAdmin(group, userId) && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Not authorized to update this group.' });
+    }
+
+    const imageUpdates = {};
+    let oldProfilePicId = group.profilePic?.publicId;
+    let oldCoverPhotoId = group.coverPhoto?.publicId;
+
+    if (profilePicFile) {
+        const result = await uploadToCloudinary(profilePicFile.buffer, profilePicFile.originalname, 'group_profile_pics', 'image');
+        imageUpdates.profilePic = { url: result.secure_url, publicId: result.public_id };
+    }
+    if (coverPhotoFile) {
+        const result = await uploadToCloudinary(coverPhotoFile.buffer, coverPhotoFile.originalname, 'group_cover_photos', 'image');
+        imageUpdates.coverPhoto = { url: result.secure_url, publicId: result.public_id };
+    }
+
+    const updateData = { ...imageUpdates };
+    if (name !== undefined) { updateData.name = name.trim(); }
+    if (description !== undefined) updateData.description = description.trim();
+    if (groupType !== undefined) updateData.groupType = groupType;
+    if (privacy !== undefined) updateData.privacy = privacy;
+    if (university !== undefined) updateData.university = university;
+    if (rules !== undefined) updateData.rules = rules;
+    if (tags !== undefined) updateData.tags = tags;
+
+    if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ success: false, error: 'No update data provided.' });
+    }
+
+    group = await Group.findByIdAndUpdate(groupId, { $set: updateData }, { new: true, runValidators: true })
+        .populate('createdBy admins moderators university', 'name profilePicUrl');
+
+    if (imageUpdates.profilePic && oldProfilePicId) cloudinary.uploader.destroy(oldProfilePicId).catch(console.error);
+    if (imageUpdates.coverPhoto && oldCoverPhotoId) cloudinary.uploader.destroy(oldCoverPhotoId).catch(console.error);
+
+    res.status(200).json({ success: true, data: group });
+};
+
+
+exports.deleteGroup = async (req, res, next) => {
+    const { groupId } = req.params;
+    const userId = req.user.id;
+
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+    if (!isGroupAdmin(group, userId) && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Not authorized to delete this group.' });
+    }
+
+    await Group.findByIdAndDelete(groupId);
+
+    res.status(200).json({ success: true, message: 'Group deleted successfully.' });
 };
