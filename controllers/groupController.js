@@ -426,3 +426,103 @@ exports.demoteAdmin = async (req, res, next) => {
   await group.save();
   res.status(200).json({ success: true, message: 'Admin demoted successfully.' });
 };
+
+exports.promoteToModerator = async (req, res, next) => {
+  const { groupId, memberId } = req.params;
+  const currentAdminId = req.user.id;
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+  if (!isGroupAdmin(group, currentAdminId)) {
+      return res.status(403).json({ success: false, error: 'Only group admins can promote members to moderator.' });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(memberId)) {
+      return res.status(400).json({ success: false, error: 'Invalid member ID format.' });
+  }
+  if (!group.members.some(id => id.equals(memberId))) {
+      return res.status(400).json({ success: false, error: 'User is not a member of this group.' });
+  }
+
+  if (group.admins.some(id => id.equals(memberId))) {
+      return res.status(400).json({ success: false, error: 'User is already an admin of this group.' });
+  }
+
+  if (group.moderators.length >= 10) {
+      return res.status(400).json({ success: false, error: 'Maximum number of moderators (10) reached.' });
+  }
+
+  group.moderators.addToSet(memberId);
+  await group.save();
+
+  console.log(`Member ${memberId} promoted to moderator in group ${groupId} by admin ${currentAdminId}`);
+  res.status(200).json({ success: true, message: 'Member promoted to moderator.' });
+};
+
+
+exports.demoteModerator = async (req, res, next) => {
+  const { groupId, moderatorIdToRemove } = req.params;
+  const currentAdminId = req.user.id;
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+  if (!isGroupAdmin(group, currentAdminId)) {
+      return res.status(403).json({ success: false, error: 'Only group admins can demote moderators.' });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(moderatorIdToRemove)) {
+      return res.status(400).json({ success: false, error: 'Invalid moderator ID format.' });
+  }
+  if (!group.moderators.some(id => id.equals(moderatorIdToRemove))) {
+      return res.status(400).json({ success: false, error: 'User is not a moderator of this group.' });
+  }
+
+  group.moderators.pull(moderatorIdToRemove);
+  await group.save();
+
+  console.log(`Moderator ${moderatorIdToRemove} demoted in group ${groupId} by admin ${currentAdminId}`);
+  res.status(200).json({ success: true, message: 'Moderator demoted successfully (remains a member).' });
+};
+
+exports.kickMember = async (req, res, next) => {
+  const { groupId, memberIdToKick } = req.params;
+  const currentStaffId = req.user.id;
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+  if (!isGroupStaff(group, currentStaffId)) {
+      return res.status(403).json({ success: false, error: 'Only group admins or moderators can kick members.' });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(memberIdToKick)) {
+      return res.status(400).json({ success: false, error: 'Invalid member ID format.' });
+  }
+  if (!group.members.some(id => id.equals(memberIdToKick))) {
+      return res.status(400).json({ success: false, error: 'User is not a member of this group.' });
+  }
+
+  if (memberIdToKick.toString() === currentStaffId.toString()) {
+      return res.status(400).json({ success: false, error: "You cannot kick yourself. Use the 'leave group' option." });
+  }
+
+  const targetIsAdmin = group.admins.some(id => id.equals(memberIdToKick));
+  if (targetIsAdmin && !isGroupAdmin(group, currentStaffId)) {
+      return res.status(403).json({ success: false, error: 'Moderators cannot kick group admins.' });
+  }
+
+  if (memberIdToKick.toString() === group.createdBy.toString()) {
+      return res.status(403).json({ success: false, error: 'The group creator cannot be kicked.' });
+  }
+
+  group.members.pull(memberIdToKick);
+  group.admins.pull(memberIdToKick);
+  group.moderators.pull(memberIdToKick);
+  await group.save();
+
+  console.log(`Member ${memberIdToKick} kicked from group ${groupId} by staff ${currentStaffId}`);
+
+  res.status(200).json({ success: true, message: 'Member kicked successfully.' });
+};
