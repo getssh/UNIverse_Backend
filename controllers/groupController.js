@@ -377,3 +377,52 @@ exports.manageJoinRequest = async (req, res, next) => {
       return res.status(200).json({ success: true, message: 'Join request rejected.' });
   }
 };
+
+exports.promoteToAdmin = async (req, res, next) => {
+  const { groupId, memberId } = req.params;
+  const currentAdminId = req.user.id;
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+  if (!isGroupAdmin(group, currentAdminId)) {
+      return res.status(403).json({ success: false, error: 'Only group admins can promote members.' });
+  }
+  if (!group.members.some(id => id.equals(memberId))) {
+      return res.status(400).json({ success: false, error: 'User is not a member of this group.' });
+  }
+  if (group.admins.length >= 5) {
+      return res.status(400).json({ success: false, error: 'Maximum number of admins (5) reached.' });
+  }
+
+  group.admins.addToSet(memberId);
+  group.moderators.pull(memberId);
+  await group.save();
+  res.status(200).json({ success: true, message: 'Member promoted to admin.' });
+};
+
+exports.demoteAdmin = async (req, res, next) => {
+  const { groupId, adminIdToRemove } = req.params;
+  const currentAdminId = req.user.id;
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+  if (!isGroupAdmin(group, currentAdminId)) {
+      return res.status(403).json({ success: false, error: 'Only group admins can demote other admins.' });
+  }
+  if (!group.admins.some(id => id.equals(adminIdToRemove))) {
+      return res.status(400).json({ success: false, error: 'User is not an admin of this group.' });
+  }
+  if (group.admins.length === 1 && adminIdToRemove.toString() === group.createdBy.toString()) {
+      return res.status(400).json({ success: false, error: 'Cannot demote the last admin. Promote another admin first.' });
+  }
+   if (adminIdToRemove.toString() === currentAdminId && group.admins.length === 1) {
+       return res.status(400).json({ success: false, error: 'You are the last admin and cannot demote yourself. Promote another admin first.' });
+   }
+
+
+  group.admins.pull(adminIdToRemove);
+  await group.save();
+  res.status(200).json({ success: true, message: 'Admin demoted successfully.' });
+};
