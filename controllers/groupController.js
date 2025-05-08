@@ -137,3 +137,46 @@ exports.getGroups = async (req, res, next) => {
         data: groups
     });
 };
+
+
+exports.getGroupById = async (req, res, next) => {
+    const { groupId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const userUniversity = req.user.university;
+
+    const group = await Group.findById(groupId)
+        .populate('createdBy', 'name profilePicUrl email')
+        .populate('admins', 'name profilePicUrl email')
+        .populate('moderators', 'name profilePicUrl email')
+        .populate('university', 'name location')
+        .lean();
+
+    if (!group) {
+        return res.status(404).json({ success: false, error: `Group not found.` });
+    }
+
+    const isMember = group.members.some(memberId => memberId.equals(userId));
+    let canView = isMember || group.privacy === 'public';
+
+    if (!canView && userUniversity) {
+        if (group.privacy === 'university_only' && group.university?._id.equals(userUniversity)) canView = true;
+        if (group.privacy === 'faculty_only' && userRole === 'teacher' && group.university?._id.equals(userUniversity)) canView = true;
+        if (group.privacy === 'students_only' && userRole === 'student' && group.university?._id.equals(userUniversity)) canView = true;
+    }
+
+    if (!canView) {
+        return res.status(403).json({ success: false, error: 'You are not authorized to view this group.' });
+    }
+
+    group.memberCount = group.members.length;
+    group.adminCount = group.admins.length;
+    group.moderatorCount = group.moderators.length;
+
+    group.isCurrentUserMember = isMember;
+    group.isCurrentUserAdmin = group.admins.some(adminId => adminId.equals(userId));
+    group.isCurrentUserModerator = group.moderators.some(modId => modId.equals(userId));
+
+
+    res.status(200).json({ success: true, data: group });
+};
