@@ -1,6 +1,6 @@
 const Post = require('../models/Post');
-// const Group = require('../models/Group');
-// const Channel = require('../models/Channel');
+const Group = require('../models/Group');
+const Channel = require('../models/Channel');
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const cloudinary = require('../config/cloudinary');
@@ -21,20 +21,18 @@ exports.createPost = async (req, res, next) => {
     const uploadedFilesData = [];
 
     try {
-        // if (groupId) {
-        //     const groupExists = await Group.findById(groupId);
-        //     if (!groupExists) {
-        //         return res.status(404).json({ success: false, error: `Group not found with ID: ${groupId}` });
-        //     }
-        //     // Optional TODO: Check if req.user.id is a member of groupExists
-        // }
-        // if (channelId) {
-        //     const channelExists = await Channel.findById(channelId);
-        //     if (!channelExists) {
-        //         return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
-        //     }
-        //     // Optional TODO: Check if req.user.id is allowed to post in channelExists
-        // }
+        if (groupId) {
+            const groupExists = await Group.findById(groupId);
+            if (!groupExists) {
+                return res.status(404).json({ success: false, error: `Group not found with ID: ${groupId}` });
+            }
+        }
+        if (channelId) {
+            const channelExists = await Channel.findById(channelId);
+            if (!channelExists) {
+                return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
+            }
+        }
 
         if (files && files.length > 0) {
             console.log(`Processing ${files.length} file(s) for upload...`);
@@ -206,7 +204,6 @@ exports.getPosts = async (req, res, next) => {
       } else if (req.query.userId) {
           queryFilter.createdBy = req.query.userId;
       } else {
-          // Default: show all if no filter specified?
       }
 
       const posts = await Post.find(queryFilter)

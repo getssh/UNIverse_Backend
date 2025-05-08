@@ -81,7 +81,6 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// --- Mongoose Middleware ---
 
 userSchema.pre('save', async function(next) {
     if (!this.isModified('password')) return next();
@@ -95,13 +94,11 @@ userSchema.pre('save', async function(next) {
     }
 });
 
-// --- Instance Methods ---
 
 userSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Generate and hash email verification token
 userSchema.methods.createVerificationToken = function() {
     const unhashedToken = crypto.randomBytes(32).toString('hex')
 

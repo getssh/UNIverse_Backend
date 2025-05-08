@@ -1,7 +1,7 @@
 const Channel = require('../models/Channel');
 const University = require('../models/University');
 const Post = require('../models/Post');
-// const Report = require('../models/Report');
+const Report = require('../models/Report');
 const User = require('../models/User');
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
