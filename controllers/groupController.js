@@ -249,3 +249,69 @@ exports.deleteGroup = async (req, res, next) => {
 
     res.status(200).json({ success: true, message: 'Group deleted successfully.' });
 };
+
+
+exports.joinOrRequestToJoinGroup = async (req, res, next) => {
+  const { groupId } = req.params;
+  const userId = req.user.id;
+  const user = await User.findById(userId).select('role university');
+  const { message } = req.body;
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+  if (group.status !== 'active') return res.status(400).json({ success: false, error: 'This group is not currently active.' });
+
+  if (group.members.some(memberId => memberId.equals(userId))) {
+      return res.status(400).json({ success: false, error: 'You are already a member of this group.' });
+  }
+
+  let canJoinDirectly = false;
+  if (group.privacy === 'public') canJoinDirectly = true;
+  if (user.university && group.university && user.university.equals(group.university)) {
+      if (group.privacy === 'university_only') canJoinDirectly = true;
+      if (group.privacy === 'faculty_only' && user.role === 'teacher') canJoinDirectly = true;
+      if (group.privacy === 'students_only' && user.role === 'student') canJoinDirectly = true;
+  }
+
+  if (canJoinDirectly) {
+      group.members.addToSet(userId);
+      group.joinRequests = group.joinRequests.filter(req => !req.user.equals(userId));
+      await group.save();
+      return res.status(200).json({ success: true, message: 'Successfully joined the group.' });
+  }
+
+  if (group.privacy === 'private') {
+      if (group.joinRequests.some(req => req.user.equals(userId))) {
+          return res.status(400).json({ success: false, error: 'You have already requested to join this group.' });
+      }
+      group.joinRequests.push({ user: userId, message: message?.trim() });
+      await group.save();
+      return res.status(200).json({ success: true, message: 'Your request to join the group has been sent.' });
+  }
+
+  return res.status(403).json({ success: false, error: 'You do not meet the criteria to join this group.' });
+};
+
+exports.leaveGroup = async (req, res, next) => {
+  const { groupId } = req.params;
+  const userId = req.user.id;
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+
+  if (!group.members.some(memberId => memberId.equals(userId))) {
+      return res.status(400).json({ success: false, error: 'You are not a member of this group.' });
+  }
+
+  if (isGroupAdmin(group, userId) && group.admins.length === 1 && group.members.length > 1) {
+       return res.status(400).json({ success: false, error: 'You are the last admin. Promote another member to admin before leaving.' });
+  }
+
+  group.members.pull(userId);
+  group.admins.pull(userId);
+  group.moderators.pull(userId);
+
+  await group.save();
+
+  res.status(200).json({ success: true, message: 'Successfully left the group.' });
+};
