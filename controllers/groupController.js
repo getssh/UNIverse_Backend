@@ -70,3 +70,70 @@ exports.createGroup = async (req, res, next) => {
 
     res.status(201).json({ success: true, data: newGroup });
 };
+
+exports.getGroups = async (req, res, next) => {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const userUniversity = req.user.university;
+
+    const filter = {};
+    if (req.query.type) filter.groupType = req.query.type;
+    if (req.query.privacy) filter.privacy = req.query.privacy;
+    if (req.query.universityId) filter.university = req.query.universityId;
+    if (req.query.tag) filter.tags = { $in: [req.query.tag.toLowerCase()] };
+    if (req.query.search) filter.name = { $regex: req.query.search, $options: 'i' };
+
+    const accessibilityFilter = {
+        $or: [
+            { privacy: 'public' },
+            ...(userUniversity ? [{ privacy: 'university_only', university: userUniversity }] : []),
+            ...(userRole === 'teacher' ? [{ privacy: 'faculty_only', ...(userUniversity && { university: userUniversity }) }] : []),
+            ...(userRole === 'student' ? [{ privacy: 'students_only', ...(userUniversity && { university: userUniversity }) }] : []),
+            { members: userId }
+        ]
+    };
+    const finalFilter = { ...filter, ...accessibilityFilter };
+
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const sort = req.query.sort === 'members' ? { memberCountVirtual: -1 } :
+                 req.query.sort === 'name' ? { name: 1 } : { createdAt: -1 };
+
+    let groups;
+    if (req.query.sort === 'members') {
+        groups = await Group.aggregate([
+            { $match: finalFilter },
+            { $addFields: { memberCountActual: { $size: "$members" } } },
+            { $sort: { memberCountActual: -1, createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit }
+        ]);
+
+        await Group.populate(groups, [
+            { path: 'createdBy', select: 'name profilePicUrl' },
+            { path: 'admins', select: 'name profilePicUrl' },
+            { path: 'university', select: 'name' }
+        ]);
+    } else {
+        groups = await Group.find(finalFilter)
+            .populate('createdBy', 'name profilePicUrl')
+            .populate('admins', 'name profilePicUrl')
+            .populate('university', 'name')
+            .sort(sort)
+            .skip(skip)
+            .limit(limit)
+            .lean();
+    }
+
+
+    const totalGroups = await Group.countDocuments(finalFilter);
+    const totalPages = Math.ceil(totalGroups / limit);
+
+    res.status(200).json({
+        success: true,
+        count: groups.length,
+        pagination: { totalGroups, totalPages, currentPage: page, limit },
+        data: groups
+    });
+};
