@@ -1,6 +1,6 @@
 const Report = require('../models/Report');
 const Post = require('../models/Post');
-// const Group = require('../models/Group'); //group coming soon 🙂
+const Group = require('../models/Group');
 const User = require('../models/User');
 const Comment = require('../models/Comment');
 const Channel = require('../models/Channel');
@@ -61,17 +61,17 @@ const handleReportThresholds = async (targetType, targetId) => {
             }
         }
 
-        // else if (targetType === 'Group') {
-        //      if (unresolvedReportCount >= 20) {
-        //         const group = await Group.findById(targetId).select('status');
-        //         if (group && group.status !== 'inactive') {
-        //             group.status = 'inactive';
-        //             await group.save();
-        //             console.log(`Group ${targetId} set to INACTIVE due to ${unresolvedReportCount} reports.`);
-        //             // TODO: Maybe notify group admin? and close the chat box?
-        //         }
-        //      }
-        // }
+        else if (targetType === 'Group') {
+             if (unresolvedReportCount >= 20) {
+                const group = await Group.findById(targetId).select('status');
+                if (group && group.status !== 'inactive') {
+                    group.status = 'inactive';
+                    await group.save();
+                    console.log(`Group ${targetId} set to INACTIVE due to ${unresolvedReportCount} reports.`);
+                    // TODO: Maybe notify group admin? and close the chat box?
+                }
+             }
+        }
 
     } catch (error) {
         console.error(`Error handling report thresholds for ${targetType} ${targetId}:`, error);

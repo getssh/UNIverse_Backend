@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Post = require('./Post'); 
-// const Report = require('./Report');
+const Report = require('./Report');
 const cloudinary = require('../config/cloudinary');
 const path = require('path');
 
@@ -103,7 +103,7 @@ channelSchema.pre('findOneAndDelete', { document: false, query: true }, async fu
 
         console.log(`Initiating cleanup for channel ${channelId}...`);
         const Post = mongoose.models.Post || mongoose.model('Post');
-        // const Report = mongoose.models.Report || mongoose.model('Report');
+        const Report = mongoose.models.Report || mongoose.model('Report');
 
         const cleanupPromises = [];
 
@@ -113,12 +113,12 @@ channelSchema.pre('findOneAndDelete', { document: false, query: true }, async fu
                 .then(result => console.log(`Unlinked ${result.modifiedCount} posts.`))
         );
 
-        // if (Report) {
-        //      console.log(`Queueing deletion of reports targeting channel ${channelId}`);
-        //      cleanupPromises.push(Report.deleteMany({ targetType: 'channel', targetId: channelId }));
-        // } else {
-        //      console.warn("Report model not found, skipping report deletion for channel.");
-        // }
+        if (Report) {
+             console.log(`Queueing deletion of reports targeting channel ${channelId}`);
+             cleanupPromises.push(Report.deleteMany({ targetType: 'channel', targetId: channelId }));
+        } else {
+             console.warn("Report model not found, skipping report deletion for channel.");
+        }
 
         if (channelToDelete && channelToDelete.profilePic && channelToDelete.profilePic.publicId) {
             console.log(`Queueing deletion of Cloudinary profile picture ${channelToDelete.profilePic.publicId}`);

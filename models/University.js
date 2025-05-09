@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const User = require('./User');
-// const Channel = require('./Channel');
+const Channel = require('./Channel');
 // const Event = require('./Event');
-// const Group = require('./Group');
+const Group = require('./Group');
 
 const universitySchema = new mongoose.Schema(
     {
@@ -71,9 +71,9 @@ universitySchema.pre('findOneAndDelete', { document: false, query: true }, async
         console.log(`Initiating cleanup for university ${universityId}...`);
 
         const User = mongoose.models.User || mongoose.model('User');
-        // const Channel = mongoose.models.Channel || mongoose.model('Channel');
+        const Channel = mongoose.models.Channel || mongoose.model('Channel');
         // const Event = mongoose.models.Event || mongoose.model('Event');
-        // const Group = mongoose.models.Group || mongoose.model('Group');
+        const Group = mongoose.models.Group || mongoose.model('Group');
 
         const cleanupPromises = [];
 
@@ -83,21 +83,18 @@ universitySchema.pre('findOneAndDelete', { document: false, query: true }, async
                 .then(result => console.log(`Unlinked ${result.modifiedCount} users.`))
         );
 
-
-        //Todo uncomment channel delation with University after creating channel apis
-
-        // console.log(`Queueing deletion of channels for university ${universityId}`);
-        // cleanupPromises.push(
-        //     Channel.find({ university: universityId }).then(async (channels) => {
-        //         if (channels.length > 0) {
-        //             console.log(`Found ${channels.length} channels to delete.`);
-        //             for (const channel of channels) {
-        //                  await Channel.findByIdAndDelete(channel._id);
-        //             }
-        //             console.log(`Finished deleting channels.`);
-        //         }
-        //     })
-        // );
+        console.log(`Queueing deletion of channels for university ${universityId}`);
+        cleanupPromises.push(
+            Channel.find({ university: universityId }).then(async (channels) => {
+                if (channels.length > 0) {
+                    console.log(`Found ${channels.length} channels to delete.`);
+                    for (const channel of channels) {
+                         await Channel.findByIdAndDelete(channel._id);
+                    }
+                    console.log(`Finished deleting channels.`);
+                }
+            })
+        );
 
         // console.log(`Queueing deletion of events for university ${universityId}`);
         // cleanupPromises.push(

@@ -71,7 +71,7 @@ commentSchema.pre('findOneAndDelete', { document: false, query: true }, async fu
     try {
          console.log(`Initiating cleanup for comment ${commentId}...`);
         const Comment = mongoose.model('Comment');
-        //  const Report = mongoose.models.Report || mongoose.model('Report');
+         const Report = mongoose.models.Report || mongoose.model('Report');
 
         const cleanupPromises = [];
 
@@ -89,12 +89,12 @@ commentSchema.pre('findOneAndDelete', { document: false, query: true }, async fu
          );
 
 
-        // if (Report) {
-        //      console.log(`Queueing deletion of reports for comment ${commentId}`);
-        //      cleanupPromises.push(Report.deleteMany({ targetType: 'comment', targetId: commentId }));
-        // } else {
-        //      console.warn("Report model not found, skipping report deletion for comment.");
-        // }
+        if (Report) {
+             console.log(`Queueing deletion of reports for comment ${commentId}`);
+             cleanupPromises.push(Report.deleteMany({ targetType: 'comment', targetId: commentId }));
+        } else {
+             console.warn("Report model not found, skipping report deletion for comment.");
+        }
 
         await Promise.all(cleanupPromises);
          console.log(`Cleanup tasks completed for comment ${commentId}`);

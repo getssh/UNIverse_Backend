@@ -55,17 +55,11 @@ const postSchema = new mongoose.Schema(
     }
 );
 
-// --- Validation ---
-
-//Todo ensure that if a group/channel ID is provided, it's valid. Group/channel id will be sent when user create a post?
-//may be implement this in the controller (check if channel/ group id exist, if not throw error?)
 
 postSchema.virtual('likeCount').get(function() {
     return this.likes ? this.likes.length : 0;
 });
 
-
-// --- Middleware ---
 
 postSchema.pre('remove', async function(next) {
   console.log(`'remove' hook: Cleaning up for post ${this._id}...`);
@@ -87,7 +81,7 @@ postSchema.pre('remove', async function(next) {
   }
 
   //Todo add func to remove files associated with a post on delation (implement this after we setup storage on our server?)
-  // You would iterate through `this.files` and delete files
+  // iterate through `this.files` and delete files
 
   next();
 });
