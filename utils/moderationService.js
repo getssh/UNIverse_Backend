@@ -11,19 +11,20 @@ exports.checkTextContent = async (text) => {
       params: {
         text: text,
         lang: 'en',
-        mode: 'standard',
+        models: 'general',
+        mode: 'ml',
         api_user: SIGHTENGINE_API_USER,
         api_secret: SIGHTENGINE_API_SECRET
       }
     });
 
-    const { profanity, personal, sexual, hate, violence } = response.data;
+    const { moderation_classes } = response.data;
     const isSafe =
-      !profanity.matches.length &&
-      !personal.matches.length &&
-      !sexual.matches.length &&
-      !hate.matches.length &&
-      !violence.matches.length;
+      moderation_classes.sexual < 0.5 &&
+      moderation_classes.discriminatory < 0.5 &&
+      moderation_classes.insulting < 0.5 &&
+      moderation_classes.violent < 0.5 &&
+      moderation_classes.toxic < 0.5
 
     return { isSafe, details: response.data };
   } catch (err) {
@@ -43,14 +44,14 @@ exports.checkImageContent = async (imageUrl) => {
       }
     });
 
-    const { nudity, weapon, alcohol, drugs, offensive } = response.data;
-    const isSafe =
-      nudity.safe >= 0.5 &&
-      weapon === 0.5 &&
-      alcohol === 0.5 &&
-      drugs === 0.5 &&
-      offensive.prob <= 0.5 &&
-      violence.prob <= 0.5;
+    const { nudity, weapon, medical, recreational_drug, offensive, violence } = response.data;
+      const isSafe =
+        nudity.none >= 0.85 &&
+        Object.values(weapon.classes).every(val => val < 0.3) &&
+        recreational_drug.prob < 0.5 &&
+        medical.prob < 0.9 && 
+        Object.values(offensive).every(val => val < 0.5) &&
+        violence.prob < 0.5
 
     return { isSafe, details: response.data };
   } catch (err) {
