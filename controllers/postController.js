@@ -4,6 +4,7 @@ const Channel = require('../models/Channel');
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const cloudinary = require('../config/cloudinary');
+const { checkTextContent, checkImageContent } = require('../utils/moderationService');
 
 
 exports.createPost = async (req, res, next) => {
@@ -65,6 +66,22 @@ exports.createPost = async (req, res, next) => {
             const results = await Promise.all(uploadPromises);
             uploadedFilesData.push(...results);
             console.log('All files uploaded successfully.');
+        }
+
+        let textSafe = true;
+        if (content) {
+          const textCheck = await checkTextContent(content);
+          textSafe = textCheck.isSafe;
+          if (!textSafe) {
+            return res.status(403).json({ success: false, error: 'Text content is inappropriate', details: textCheck.details });
+          }
+        }
+
+        for (const fileData of uploadedFilesData) {
+          const imageCheck = await checkImageContent(fileData.url);
+          if (!imageCheck.isSafe) {
+            return res.status(403).json({ success: false, error: 'Image content is inappropriate', details: imageCheck.details });
+          }
         }
 
         const postData = {
