@@ -183,8 +183,8 @@ exports.getGroupById = async (req, res, next) => {
     group.moderatorCount = group.moderators.length;
 
     group.isCurrentUserMember = isMember;
-    group.isCurrentUserAdmin = group.admins.some(adminId => adminId.equals(userId));
-    group.isCurrentUserModerator = group.moderators.some(modId => modId.equals(userId));
+    group.isCurrentUserAdmin = group.admins.some(adminId => adminId._id.equals(userId));
+    group.isCurrentUserModerator = group.moderators.some(modId => modId._id.equals(userId));
 
 
     res.status(200).json({ success: true, data: group });
@@ -343,14 +343,9 @@ exports.manageJoinRequest = async (req, res, next) => {
   const { action } = req.body;
   const adminUserId = req.user.id;
 
-
-  if (!action || !['approve', 'reject'].includes(action)) {
-      return res.status(400).json({ success: false, error: "Action must be 'approve' or 'reject'." });
-  }
   if (!mongoose.Types.ObjectId.isValid(requestId)) {
       return res.status(400).json({ success: false, error: "Invalid request user ID." });
   }
-
 
   const group = await Group.findById(groupId);
   if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
@@ -364,7 +359,7 @@ exports.manageJoinRequest = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Join request not found.' });
   }
 
-  if (action === 'approve') {
+  if (action == 'approve') {
       group.members.addToSet(requestId);
       group.joinRequests.splice(requestIndex, 1);
       await group.save();
@@ -483,7 +478,7 @@ exports.demoteModerator = async (req, res, next) => {
   await group.save();
 
   console.log(`Moderator ${moderatorIdToRemove} demoted in group ${groupId} by admin ${currentAdminId}`);
-  res.status(200).json({ success: true, message: 'Moderator demoted successfully (remains a member).' });
+  res.status(200).json({ success: true, message: 'Moderator demoted successfully.' });
 };
 
 exports.kickMember = async (req, res, next) => {
@@ -497,9 +492,6 @@ exports.kickMember = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Only group admins or moderators can kick members.' });
   }
 
-  if (!mongoose.Types.ObjectId.isValid(memberIdToKick)) {
-      return res.status(400).json({ success: false, error: 'Invalid member ID format.' });
-  }
   if (!group.members.some(id => id.equals(memberIdToKick))) {
       return res.status(400).json({ success: false, error: 'User is not a member of this group.' });
   }

@@ -42,6 +42,7 @@ const handleValidationErrors = (req, res, next) => {
 
 const groupIdValidation = [param('groupId', 'Invalid Group ID format').isMongoId()];
 const memberIdValidation = [param('memberId', 'Invalid Member ID format').isMongoId()];
+const memberIdToKickValidation = [param('memberIdToKick', 'Invalid Member ID format').isMongoId()];
 const adminIdValidation = [param('adminIdToRemove', 'Invalid Admin ID format').isMongoId()];
 const moderatorIdValidation = [param('moderatorIdToRemove', 'Invalid Moderator ID format').isMongoId()];
 const requestIdValidation = [param('requestId', 'Invalid Request User ID format').isMongoId()];
@@ -207,7 +208,7 @@ router.delete(
     '/:groupId/members/:memberIdToKick/kick',
     protect,
     groupIdValidation,
-    memberIdValidation,
+    memberIdToKickValidation,
     handleValidationErrors,
     kickMember
 );

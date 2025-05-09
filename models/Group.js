@@ -98,8 +98,6 @@ const groupSchema = new mongoose.Schema(
     }
 );
 
-
-groupSchema.index({ name: 1 }, { collation: { locale: 'en', strength: 2 } });
 groupSchema.index({ members: 1 });
 groupSchema.index({ admins: 1 });
 groupSchema.index({ tags: 1 });
