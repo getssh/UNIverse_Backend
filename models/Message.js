@@ -67,7 +67,7 @@ messageSchema.virtual('likeCount').get(function() {
 
 
 messageSchema.pre('findOneAndDelete', { document: false, query: true }, async function(next) {
-    console.log('Message pre-findOneAndDelete hook triggered...');
+    console.log('Message pre-findOneAndDelete hook triggered');
     const query = this.getQuery();
     const messageId = query._id;
 
