@@ -5,6 +5,7 @@ const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const cloudinary = require('../config/cloudinary');
 const mongoose = require('mongoose');
+const Chat = require('../models/Chat');
 
 const isGroupAdmin = (group, userId) => {
   return group.admins.some(adminId => adminId.equals(userId));
@@ -22,62 +23,108 @@ exports.createGroup = async (req, res, next) => {
     const coverPhotoFile = req.files?.coverPhoto?.[0];
     const createdBy = req.user.id;
 
-    if (!name || !groupType || !privacy) {
-        return res.status(400).json({ success: false, error: 'Name, group type, and privacy are required.' });
-    }
-    if (university && !mongoose.Types.ObjectId.isValid(university)) {
-         return res.status(400).json({ success: false, error: 'Invalid University ID format.' });
-    }
-    if (university) {
-        const uniExists = await University.findById(university);
-        if (!uniExists) return res.status(404).json({ success: false, error: 'University not found.' });
-    }
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const existingGroup = await Group.findOne({ name: name.trim() });
-    if (existingGroup) {
-        return res.status(409).json({ success: false, error: `Group name "${name}" already exists.` });
+    try {
+      if (!name || !groupType || !privacy) {
+          await session.abortTransaction();
+          session.endSession();
+          return res.status(400).json({ success: false, error: 'Name, group type, and privacy are required.' });
+      }
+      if (university && !mongoose.Types.ObjectId.isValid(university)) {
+           return res.status(400).json({ success: false, error: 'Invalid University ID format.' });
+      }
+      if (university) {
+          const uniExists = await University.findById(university).session(session);
+          if (!uniExists) {
+              await session.abortTransaction(); session.endSession();
+              return res.status(404).json({ success: false, error: 'University not found.' });
+          }
+      }
+  
+      const existingGroup = await Group.findOne({ name: name.trim() }).session(session);
+      if (existingGroup) {
+          await session.abortTransaction(); session.endSession();
+          return res.status(409).json({ success: false, error: `Group name "${name}" already exists.` });
+      }
+  
+      let profilePicData = {}, coverPhotoData = {};
+      const uploadPromises = [];
+  
+      if (profilePicFile) {
+          uploadPromises.push(
+              uploadToCloudinary(profilePicFile.buffer, profilePicFile.originalname, 'group_profile_pics', 'image')
+                  .then(result => profilePicData = { url: result.secure_url, publicId: result.public_id })
+                  .catch(err => { throw new Error(`Profile pic upload failed: ${err.message}`) })
+          );
+      }
+      if (coverPhotoFile) {
+          uploadPromises.push(
+              uploadToCloudinary(coverPhotoFile.buffer, coverPhotoFile.originalname, 'group_cover_photos', 'image')
+                  .then(result => coverPhotoData = { url: result.secure_url, publicId: result.public_id })
+                  .catch(err => { throw new Error(`Cover photo upload failed: ${err.message}`) })
+          );
+      }
+      await Promise.all(uploadPromises);
+  
+      const groupData = {
+          name: name.trim(),
+          description: description?.trim(),
+          profilePic: profilePicData.url ? profilePicData : undefined,
+          coverPhoto: coverPhotoData.url ? coverPhotoData : undefined,
+          createdBy,
+          groupType,
+          privacy,
+          university: university || undefined,
+          rules: rules || [],
+          tags: tags || [],
+      };
+  
+      const newGroupArray = await Group.create([groupData], { session });
+      let newGroup = newGroupArray[0];
+  
+      const chatData = {
+        name: newGroup.name,
+        chatType: 'group',
+        participants: [...newGroup.members],
+        group: newGroup._id,
+      };
+      const newChatArray = await Chat.create([chatData], { session });
+      const newChat = newChatArray[0];
+  
+      newGroup.associatedChat = newChat._id;
+      await newGroup.save({ session });
+  
+      await session.commitTransaction();
+      session.endSession();
+  
+      console.log(`Group '${newGroup.name}' and associated chat ${newChat._id} created.`);
+  
+      newGroup = await Group.findById(newGroup._id)
+                           .populate('createdBy', 'name profilePicUrl')
+                           .populate('admins', 'name profilePicUrl')
+                           .populate('university', 'name')
+                           .lean();
+  
+      res.status(201).json({ success: true, data: newGroup });
+  
+      newGroup = await Group.findById(newGroup._id)
+                        .populate('createdBy', 'name profilePicUrl')
+                        .populate('admins', 'name profilePicUrl')
+                        .populate('university', 'name')
+                        .populate('associatedChat', '_id name chatType')
+                        .lean();
+  
+      res.status(201).json({ success: true, data: newGroup });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error("Error creating group or chat:", error);
+        if (profilePicData.publicId) cloudinary.uploader.destroy(profilePicData.publicId).catch(console.error);
+        if (coverPhotoData.publicId) cloudinary.uploader.destroy(coverPhotoData.publicId).catch(console.error);
+        next(error);
     }
-
-    let profilePicData = {}, coverPhotoData = {};
-    const uploadPromises = [];
-
-    if (profilePicFile) {
-        uploadPromises.push(
-            uploadToCloudinary(profilePicFile.buffer, profilePicFile.originalname, 'group_profile_pics', 'image')
-                .then(result => profilePicData = { url: result.secure_url, publicId: result.public_id })
-                .catch(err => { throw new Error(`Profile pic upload failed: ${err.message}`) })
-        );
-    }
-    if (coverPhotoFile) {
-        uploadPromises.push(
-            uploadToCloudinary(coverPhotoFile.buffer, coverPhotoFile.originalname, 'group_cover_photos', 'image')
-                .then(result => coverPhotoData = { url: result.secure_url, publicId: result.public_id })
-                .catch(err => { throw new Error(`Cover photo upload failed: ${err.message}`) })
-        );
-    }
-    await Promise.all(uploadPromises);
-
-    const groupData = {
-        name: name.trim(),
-        description: description?.trim(),
-        profilePic: profilePicData.url ? profilePicData : undefined,
-        coverPhoto: coverPhotoData.url ? coverPhotoData : undefined,
-        createdBy,
-        groupType,
-        privacy,
-        university: university || undefined,
-        rules: rules || [],
-        tags: tags || [],
-    };
-
-    let newGroup = await Group.create(groupData);
-    newGroup = await Group.findById(newGroup._id)
-                         .populate('createdBy', 'name profilePicUrl')
-                         .populate('admins', 'name profilePicUrl')
-                         .populate('university', 'name')
-                         .lean();
-
-    res.status(201).json({ success: true, data: newGroup });
 };
 
 exports.getGroups = async (req, res, next) => {
