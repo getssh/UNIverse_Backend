@@ -310,7 +310,7 @@ exports.joinOrRequestToJoinGroup = async (req, res, next) => {
   const user = await User.findById(userId).select('role university');
   const { message } = req.body;
 
-  const group = await Group.findById(groupId);
+  const group = await Group.findById(groupId).populate('associatedChat', '_id');
   if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
   if (group.status !== 'active') return res.status(400).json({ success: false, error: 'This group is not currently active.' });
 
@@ -330,11 +330,19 @@ exports.joinOrRequestToJoinGroup = async (req, res, next) => {
       group.members.addToSet(userId);
       group.joinRequests = group.joinRequests.filter(req => !req.user.equals(userId));
       await group.save();
+
+      if (group.associatedChat && group.associatedChat._id) {
+        await Chat.findByIdAndUpdate(group.associatedChat._id, {
+            $addToSet: { participants: userId }
+        });
+        console.log(`User ${userId} added to chat participants for group ${groupId}`);
+      }
+
       return res.status(200).json({ success: true, message: 'Successfully joined the group.' });
   }
 
   if (group.privacy === 'private') {
-      if (group.joinRequests.some(req => req.user.equals(userId))) {
+      if (group.joinRequests.some(reqFind => reqFind.user.equals(userId))) {
           return res.status(400).json({ success: false, error: 'You have already requested to join this group.' });
       }
       group.joinRequests.push({ user: userId, message: message?.trim() });
@@ -349,7 +357,7 @@ exports.leaveGroup = async (req, res, next) => {
   const { groupId } = req.params;
   const userId = req.user.id;
 
-  const group = await Group.findById(groupId);
+  const group = await Group.findById(groupId).populate('associatedChat', '_id');
   if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
 
   if (!group.members.some(memberId => memberId.equals(userId))) {
@@ -364,7 +372,16 @@ exports.leaveGroup = async (req, res, next) => {
   group.admins.pull(userId);
   group.moderators.pull(userId);
 
+  if (group.members.length === 0) { group.status = 'archived'; }
+
   await group.save();
+
+  if (group.associatedChat && group.associatedChat._id) {
+    await Chat.findByIdAndUpdate(group.associatedChat._id, {
+        $pull: { participants: userId }
+    });
+    console.log(`User ${userId} removed from chat participants for group ${groupId}`);
+  }
 
   res.status(200).json({ success: true, message: 'Successfully left the group.' });
 };
@@ -394,14 +411,14 @@ exports.manageJoinRequest = async (req, res, next) => {
       return res.status(400).json({ success: false, error: "Invalid request user ID." });
   }
 
-  const group = await Group.findById(groupId);
+  const group = await Group.findById(groupId).populate('associatedChat', '_id');
   if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
 
   if (!isGroupStaff(group, adminUserId) && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, error: 'Not authorized to manage join requests.' });
   }
 
-  const requestIndex = group.joinRequests.findIndex(req => req.user.equals(requestId));
+  const requestIndex = group.joinRequests.findIndex(reqFind => reqFind.user.equals(requestId));
   if (requestIndex === -1) {
       return res.status(404).json({ success: false, error: 'Join request not found.' });
   }
@@ -410,6 +427,13 @@ exports.manageJoinRequest = async (req, res, next) => {
       group.members.addToSet(requestId);
       group.joinRequests.splice(requestIndex, 1);
       await group.save();
+
+      if (group.associatedChat && group.associatedChat._id) {
+        await Chat.findByIdAndUpdate(group.associatedChat._id, {
+            $addToSet: { participants: requestId }
+        });
+        console.log(`User ${requestId} (approved) added to chat for group ${groupId}`);
+      }
 
       return res.status(200).json({ success: true, message: 'Join request approved.' });
   } else {
@@ -532,7 +556,7 @@ exports.kickMember = async (req, res, next) => {
   const { groupId, memberIdToKick } = req.params;
   const currentStaffId = req.user.id;
 
-  const group = await Group.findById(groupId);
+  const group = await Group.findById(groupId).populate('associatedChat', '_id');
   if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
 
   if (!isGroupStaff(group, currentStaffId)) {
@@ -560,6 +584,13 @@ exports.kickMember = async (req, res, next) => {
   group.admins.pull(memberIdToKick);
   group.moderators.pull(memberIdToKick);
   await group.save();
+
+  if (group.associatedChat && group.associatedChat._id) {
+      await Chat.findByIdAndUpdate(group.associatedChat._id, {
+          $pull: { participants: memberIdToKick }
+      });
+      console.log(`Kicked user ${memberIdToKick} removed from chat for group ${groupId}`);
+  }
 
   console.log(`Member ${memberIdToKick} kicked from group ${groupId} by staff ${currentStaffId}`);
 
