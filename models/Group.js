@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const User = require('./User');
 const Post = require('./Post');
 const Report = require('./Report');
-// const Chat = require('./Chat'); // to be done tommorow?
+const Chat = require('./Chat');
 const cloudinary = require('../config/cloudinary');
 
 const groupSchema = new mongoose.Schema(
@@ -90,6 +90,12 @@ const groupSchema = new mongoose.Schema(
               message: { type: String, trim: true, maxlength: 200 }
           }
       ],
+      associatedChat: {
+            type: mongoose.Schema.ObjectId,
+            ref: 'Chat',
+            unique: true,
+            sparse: true
+        }
     },
     {
         timestamps: true,
@@ -162,7 +168,7 @@ groupSchema.pre('validate', async function(next) {
 
 
 groupSchema.pre('findOneAndDelete', { document: false, query: true }, async function(next) {
-    console.log('Group pre-findOneAndDelete triggered...');
+    console.log('Group pre-findOneAndDelete triggered');
     const query = this.getQuery();
     const groupId = query._id;
 
@@ -174,10 +180,10 @@ groupSchema.pre('findOneAndDelete', { document: false, query: true }, async func
     try {
         const groupToDelete = await mongoose.model('Group').findById(groupId).select('profilePic coverPhoto');
 
-        console.log(`Initiating cleanup for group ${groupId}...`);
+        console.log(`Initiating cleanup for group ${groupId}`);
         const Post = mongoose.models.Post || mongoose.model('Post');
         const Report = mongoose.models.Report || mongoose.model('Report');
-        // const Chat = mongoose.models.Chat || mongoose.model('Chat'); // for chat
+        const Chat = mongoose.models.Chat || mongoose.model('Chat');
 
         const cleanupPromises = [];
 
@@ -190,14 +196,6 @@ groupSchema.pre('findOneAndDelete', { document: false, query: true }, async func
         console.log(`Queueing deletion of reports targeting group ${groupId}`);
         cleanupPromises.push(Report.deleteMany({ targetType: 'Group', targetId: groupId }));
 
-        // for chat  
-        /*
-        if (Chat) {
-            console.log(`Queueing deletion of chat for group ${groupId}`);
-            cleanupPromises.push(Chat.findOneAndDelete({ groupId: groupId })); // Assuming one chat per group
-        }
-        */
-
         if (groupToDelete) {
             if (groupToDelete.profilePic && groupToDelete.profilePic.publicId) {
                 console.log(`Queueing deletion of group profile pic ${groupToDelete.profilePic.publicId}`);
@@ -206,6 +204,10 @@ groupSchema.pre('findOneAndDelete', { document: false, query: true }, async func
             if (groupToDelete.coverPhoto && groupToDelete.coverPhoto.publicId) {
                 console.log(`Queueing deletion of group cover photo ${groupToDelete.coverPhoto.publicId}`);
                 cleanupPromises.push(cloudinary.uploader.destroy(groupToDelete.coverPhoto.publicId, { resource_type: 'image' }));
+            }
+            if (groupToDelete.associatedChat && Chat) {
+                console.log(`Queueing deletion of associated chat ${groupToDelete.associatedChat} for group ${groupId}`);
+                cleanupPromises.push(Chat.findByIdAndDelete(groupToDelete.associatedChat));
             }
         }
 

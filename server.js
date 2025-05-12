@@ -20,6 +20,8 @@ const universityRoutes = require('./routes/universityRoutes');
 const channelRoutes = require('./routes/channelRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const groupRoutes = require('./routes/groupRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 
 const app = express();
@@ -31,7 +33,7 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// HTTP request logging
+
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
@@ -44,6 +46,9 @@ app.use('/api/channels', channelRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/users', userRoutes); 
+app.use('/api/chats', chatRoutes);
+app.use('/api/messages', messageRoutes);
+
 
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the University Platform API!' });
@@ -59,7 +64,7 @@ const server = app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
 
-// --- Graceful Shutdown & Unhandled Rejection Handling ---
+
 process.on('unhandledRejection', (err, promise) => {
     console.error(`Unhandled Rejection: ${err.message}`);
     
