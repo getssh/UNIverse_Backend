@@ -5,6 +5,7 @@ const Group = require('../models/Group')
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const mongoose = require('mongoose');
+const { checkTextContent, checkImageContent } = require('../utils/moderationService');
 
 
 exports.sendMessage = async (req, res, next) => {
@@ -51,6 +52,22 @@ exports.sendMessage = async (req, res, next) => {
                 console.error("Message file upload failed:", uploadError);
                 return res.status(500).json({ success: false, error: `Failed to upload file: ${uploadError.message}` });
             }
+        }
+
+        let textSafe = true;
+        if (content) {
+          const textCheck = await checkTextContent(content);
+          textSafe = textCheck.isSafe;
+          if (!textSafe) {
+            return res.status(403).json({ success: false, error: 'Text content is inappropriate', details: textCheck.details });
+          }
+        }
+
+        if (fileData) {
+          const imageCheck = await checkImageContent(fileData.url);
+          if (!imageCheck.isSafe) {
+            return res.status(403).json({ success: false, error: 'Image content is inappropriate', details: imageCheck.details });
+          }
         }
 
         const messageData = {
