@@ -102,14 +102,6 @@ exports.createGroup = async (req, res, next) => {
       console.log(`Group '${newGroup.name}' and associated chat ${newChat._id} created.`);
   
       newGroup = await Group.findById(newGroup._id)
-                           .populate('createdBy', 'name profilePicUrl')
-                           .populate('admins', 'name profilePicUrl')
-                           .populate('university', 'name')
-                           .lean();
-  
-      res.status(201).json({ success: true, data: newGroup });
-  
-      newGroup = await Group.findById(newGroup._id)
                         .populate('createdBy', 'name profilePicUrl')
                         .populate('admins', 'name profilePicUrl')
                         .populate('university', 'name')
