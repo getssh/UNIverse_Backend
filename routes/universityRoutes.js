@@ -1,5 +1,7 @@
 const express = require('express');
 const { body, param, query, validationResult } = require('express-validator');
+const multer = require('multer')
+
 
 const {
     createUniversity,
@@ -12,6 +14,7 @@ const {
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+const upload = multer()
 
 
 const handleValidationErrors = (req, res, next) => {
@@ -47,6 +50,7 @@ router.route('/')
     .post(
         protect,
         authorize('admin'),
+        upload.single('logo'),
         universityBodyValidation,
         handleValidationErrors,
         createUniversity

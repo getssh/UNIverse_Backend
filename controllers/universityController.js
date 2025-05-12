@@ -2,36 +2,52 @@ const University = require('../models/University');
 const mongoose = require('mongoose');
 
 exports.createUniversity = async (req, res, next) => {
-    const { name, description, location, websiteUrl, logoUrl, contactEmail, contactPhone } = req.body;
-
-    if (!name) {
+    try {
+      const { name, description, location, websiteUrl, contactEmail, contactPhone } = req.body;
+  
+      if (!name) {
         return res.status(400).json({ success: false, error: 'University name is required.' });
-    }
-
-    const existingUniversity = await University.findOne({ name: { $regex: `^${name.trim()}$`, $options: 'i' } });
-    if (existingUniversity) {
-        return res.status(409).json({ success: false, error: `University with name "${name}" already exists.` });
-    }
-
-    const universityData = {
+      }
+  
+      // Check if university already exists
+      const existingUniversity = await University.findOne({
+        name: { $regex: `^${name.trim()}$`, $options: 'i' }
+      });
+  
+      if (existingUniversity) {
+        return res.status(409).json({
+          success: false,
+          error: `University with name "${name}" already exists.`
+        });
+      }
+  
+      // ✅ Get logo from uploaded file if it exists
+      const logoUrl = req.file ? `uploads/${req.file.filename}` : null;
+  
+      const universityData = {
         name: name.trim(),
         description: description?.trim(),
         location: location?.trim(),
         websiteUrl: websiteUrl?.trim(),
-        logoUrl: logoUrl?.trim(),
+        logoUrl, // from uploaded file
         contactEmail: contactEmail?.trim().toLowerCase(),
         contactPhone: contactPhone?.trim()
-    };
-
-    const university = await University.create(universityData);
-
-    console.log(`University '${university.name}' created successfully by admin ${req.user.id}`);
-
-    res.status(201).json({
+      };
+  
+      const university = await University.create(universityData);
+  
+      console.log(`University '${university.name}' created successfully by admin ${req.user.id}`);
+  
+      res.status(201).json({
         success: true,
         data: university
-    });
-};
+      });
+    } catch (err) {
+      console.error(err)
+      res.status(500).json({ success: false, error: "Server error" })
+    }
+  };
+  
 
 exports.getUniversities = async (req, res, next) => {
     const page = parseInt(req.query.page, 10) || 1;

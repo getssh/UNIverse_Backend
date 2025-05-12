@@ -8,6 +8,7 @@ const morgan = require('morgan');
 const connectDB = require('./config/db'); 
 const errorHandler = require('./middleware/errorMiddleware');
 const cookieParser = require('cookie-parser'); 
+const userRoutes = require('./routes/userRoutes'); 
 
 connectDB(); 
 
@@ -19,6 +20,7 @@ const universityRoutes = require('./routes/universityRoutes');
 const channelRoutes = require('./routes/channelRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const groupRoutes = require('./routes/groupRoutes');
+
 
 const app = express();
 
@@ -41,6 +43,7 @@ app.use('/api/universities', universityRoutes);
 app.use('/api/channels', channelRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/users', userRoutes); 
 
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the University Platform API!' });
@@ -49,7 +52,8 @@ app.get('/', (req, res) => {
 
 app.use(errorHandler);
 
-const PORT = 3000;
+
+const PORT = 5000;
 
 const server = app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
