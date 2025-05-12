@@ -179,7 +179,7 @@ exports.deleteMessage = async (req, res, next) => {
     }
 
     try {
-        const message = await Message.findById(messageId).populate('chatId', 'admins group');
+        const message = await Message.findById(messageId).populate('chatId', 'admins group chatType');
         if (!message) {
             return res.status(404).json({ success: false, error: 'Message not found.' });
         }
@@ -189,10 +189,9 @@ exports.deleteMessage = async (req, res, next) => {
 
         if (message.sender.equals(userId)) {
             canDelete = true;
-        }
-
-        else if (chat && chat.chatType === 'group' && chat.group) {
+        } else if (chat && chat.chatType === 'group' && chat.group) {
             const group = await Group.findById(chat.group).select('admins');
+
             if (group && group.admins.some(adminId => adminId.equals(userId))) {
                 canDelete = true;
             }
