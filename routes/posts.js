@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const { body, param, validationResult } = require('express-validator');
 
-const { createPost, updatePost, deletePost, getPosts, getPostById, likePost } = require('../controllers/postController');
+const { createPost, updatePost, deletePost, getPosts, getPostById, likePost, getPostsByChannelId } = require('../controllers/postController');
 const { createComment, getCommentsForPost } = require('../controllers/commentController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -58,7 +58,7 @@ const updatePostValidationRules = [
 router.post(
     '/',
     protect,
-    upload.array('postFiles', 5),
+    upload.array('files', 5),
     createPost
 );
 
@@ -87,6 +87,15 @@ router.get(
   postIdValidation,
   handleValidationErrors,
   getPostById
+);
+
+//post with channelId
+router.get(
+  '/channel/:channelId',
+  protect,
+  param('channelId', 'Invalid Channel ID format').isMongoId(),
+  handleValidationErrors,
+  getPostsByChannelId
 );
 
 router.put(

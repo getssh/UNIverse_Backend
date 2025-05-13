@@ -149,6 +149,7 @@ exports.getChannels = async (req, res, next) => {
     res.status(200).json({
         success: true,
         count: channels.length,
+        hasMore: page < totalPages,
         pagination: { totalChannels, totalPages, currentPage: page, limit },
         data: channels
     });
