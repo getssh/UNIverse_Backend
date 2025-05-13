@@ -10,7 +10,7 @@ const { checkTextContent, checkImageContent } = require('../utils/moderationServ
 exports.createPost = async (req, res, next) => {
     const { content, groupId, channelId } = req.body;
     const userId = req.user.id;
-    const files = req.files;
+    const files = req.files || [];
 
     if (!content && (!files || files.length === 0)) {
         return res.status(400).json({ success: false, error: 'Post must have content or at least one file.' });
@@ -332,3 +332,27 @@ exports.likePost = async (req, res, next) => {
       next(error);
   }
 };
+
+//get post by channelId
+exports.getPostsByChannelId = async (req, res, next) => {
+    const { channelId } = req.params;
+  
+    try {
+      const posts = await Post.find({ channel: channelId })
+        .populate('createdBy', 'name profilePicUrl')
+        .populate('group')
+        .populate('channel')
+        .sort({ createdAt: -1 })
+        .lean();
+  
+      res.status(200).json({
+        success: true,
+        count: posts.length,
+        data: posts, // this will be an empty array if no posts are found
+      });
+    } catch (error) {
+      console.error(`Error getting posts for channel ${channelId}:`, error);
+      next(error);
+    }
+  };
+  
