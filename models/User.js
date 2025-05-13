@@ -33,6 +33,7 @@ const userSchema = new mongoose.Schema({
     university: {
         type: mongoose.Schema.ObjectId,
         ref: 'University',
+        required: [true, "You must select a university"],
     },
     department: String,
     faculty: String,

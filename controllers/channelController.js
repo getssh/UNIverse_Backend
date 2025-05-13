@@ -14,6 +14,12 @@ exports.createChannel = async (req, res, next) => {
     const profilePicFile = req.file;
     const adminUserId = req.user.id;
 
+    const universityAdmin = await User.findById(adminUserId);
+
+    if (!universityAdmin || !universityAdmin.university.equals(university)) {
+      return res.status(404).json({success: false, error: `University not found or admin not associated with a university`})
+    }
+
     if (!name || !university || !channelType) {
         return res.status(400).json({ success: false, error: 'Please provide name, university ID, and channel type.' });
     }
