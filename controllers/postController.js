@@ -1,5 +1,6 @@
 const Post = require('../models/Post');
 const Group = require('../models/Group');
+const User = require('../models/User')
 const Channel = require('../models/Channel');
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
@@ -18,6 +19,9 @@ exports.createPost = async (req, res, next) => {
     if (groupId && channelId) {
         return res.status(400).json({ success: false, error: 'A post cannot belong to both a group and a channel.' });
     }
+    if (!groupId && !channelId) {
+        return res.status(400).json({ success: false, error: 'A post must belong to a group or channel' });
+    }
 
     const uploadedFilesData = [];
 
@@ -30,8 +34,12 @@ exports.createPost = async (req, res, next) => {
         }
         if (channelId) {
             const channelExists = await Channel.findById(channelId);
+            const logedInUser = await User.findById(userId);
+
             if (!channelExists) {
                 return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
+            } else if (!logedInUser.university.equals(channelExists.university)) {
+                return res.status(401).json({success: false, error: `Not authorized to create a post in this channel`})
             }
         }
 
