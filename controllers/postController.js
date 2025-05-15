@@ -115,19 +115,17 @@ exports.createPost = async (req, res, next) => {
 
     } catch (error) {
          console.error("Error creating post:", error);
-         // TODO: Add cleanup logic here? If Cloudinary uploads succeeded but Post.create failed (maybe handle in d/t way latter)
-         // the files are orphaned. This is complex to handle transactionally without 2PC.
-         // Simplest approach for now is logging. More advanced: attempt to delete uploaded files in catch.
-        //  if (uploadedFilesData.length > 0 && error.name !== 'ValidationError') {
-        //     console.warn("Post creation failed after files were uploaded. Attempting cleanup (best effort)...");
-        //      uploadedFilesData.forEach(fileData => {
-        //          if (fileData.publicId) {
-        //              cloudinary.uploader.destroy(fileData.publicId, { resource_type: fileData.resourceType || 'auto' })
-        //                  .then(delResult => console.log(`Cleanup: Deleted orphaned Cloudinary file ${fileData.publicId}`, delResult))
-        //                  .catch(delErr => console.error(`Cleanup Error: Failed to delete orphaned Cloudinary file ${fileData.publicId}`, delErr));
-        //          }
-        //      });
-        //  }
+         // TODO: change cleanup logic here? If Cloudinary uploads succeeded but Post.create failed (maybe handle in d/t way latter)
+         if (uploadedFilesData.length > 0 && error.name !== 'ValidationError') {
+            console.warn("Post creation failed after files were uploaded. Attempting cleanup (best effort)...");
+             uploadedFilesData.forEach(fileData => {
+                 if (fileData.publicId) {
+                     cloudinary.uploader.destroy(fileData.publicId, { resource_type: fileData.resourceType || 'auto' })
+                         .then(delResult => console.log(`Cleanup: Deleted orphaned Cloudinary file ${fileData.publicId}`, delResult))
+                         .catch(delErr => console.error(`Cleanup Error: Failed to delete orphaned Cloudinary file ${fileData.publicId}`, delErr));
+                 }
+             });
+         }
 
         next(error);
     }
@@ -233,7 +231,7 @@ exports.getPosts = async (req, res, next) => {
 
       const posts = await Post.find(queryFilter)
           .populate('createdBy', 'name profilePicUrl')
-          .populate('group', 'name') //populate group and channel names, can be deleted if not necessary 
+          .populate('group', 'name') 
           .populate('channel', 'name')
           .sort({ createdAt: -1 })
           .skip(skip)
