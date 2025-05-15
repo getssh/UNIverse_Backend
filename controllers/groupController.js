@@ -709,4 +709,58 @@ exports.joinGroupWithoutRequest = async (req, res, next) => {
   res.status(200).json({ success: true, message: 'Successfully joined the group.' });
 }
 
+//sending groups with search query
+exports.searchGroups = async (req, res, next) => {
+  try {
+    // Get query from URL params (since frontend uses /search/:query)
+    const { query } = req.params;
+    const userId = req.user.id;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
 
+    // Validate query exists and is a string
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Search query must be a non-empty string' 
+      });
+    }
+
+    const searchQuery = {
+      name: { 
+        $regex: query.trim(), // Ensure string and trim whitespace
+        $options: 'i' // Case insensitive
+      }
+    };
+
+    const [groups, totalGroups] = await Promise.all([
+      Group.find(searchQuery)
+        .populate('createdBy', 'name profilePicUrl')
+        .populate('admins', 'name profilePicUrl')
+        .populate('university', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Group.countDocuments(searchQuery)
+    ]);
+
+    const totalPages = Math.ceil(totalGroups / limit);
+
+    res.status(200).json({
+      success: true,
+      count: groups.length,
+      pagination: { totalGroups, totalPages, currentPage: page, limit },
+      data: groups
+    });
+
+  } catch (error) {
+    console.error("Error searching groups:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Server error',
+      message: error.message 
+    });
+  }
+};
