@@ -6,7 +6,7 @@ async function createAdmin() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
 
-    const emailToUse = 'taberihun07@gmail.com';
+    const emailToUse = 'admin3@gmail.com';
     const existingUser = await User.findOne({ email: emailToUse });
 
     if (existingUser) {
@@ -15,10 +15,11 @@ async function createAdmin() {
     }
 
     const admin = new User({
-      name: 'Third Admin',
+      name: 'four Admin',
       email: emailToUse,
       password: 'admin123',  // ✅ plain password; will be hashed by pre-save hook
       role: 'admin',
+      university: "6820dbc5981df302da754641",
       isEmailVerified: true,
       accountStatus: 'active'
     });

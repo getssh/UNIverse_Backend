@@ -63,9 +63,10 @@ const groupSchema = new mongoose.Schema(
             enum: ['public', 'private', 'university_only', 'faculty_only', 'students_only'],
             default: 'public'
         },
-        university: { //maybe we dont need to associate groups with university?
+        university: {
             type: mongoose.Schema.ObjectId,
             ref: 'University',
+            required: [true, "Group must belong to a univeristy"],
             index: true
         },
         rules: [{
