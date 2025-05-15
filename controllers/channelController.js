@@ -56,6 +56,15 @@ exports.createChannel = async (req, res, next) => {
         }
 
     }
+                let members = [adminUserId]; // Start with the admin
+            try {
+                const universityUsers = await User.find({ university: university }).select('_id');
+                const userIds = universityUsers.map(user => user._id.toString());
+
+                members = [...new Set([adminUserId, ...userIds])]; // Ensure no duplicates
+            } catch (err) {
+                return res.status(500).json({ success: false, error: "Failed to fetch university users." });
+            }
 
     const channelData = {
         name: name.trim(),
@@ -63,7 +72,7 @@ exports.createChannel = async (req, res, next) => {
         profilePic: profilePicData.url ? profilePicData : undefined,
         university: university,
         channelType: channelType,
-        admin: adminUserId,
+        members,
         members: [adminUserId],
         isPublic: isPublic !== undefined ? isPublic : true
     };
@@ -182,6 +191,80 @@ exports.getChannelById = async (req, res, next) => {
     res.status(200).json({
         success: true,
         data: channel
+    });
+};
+
+// sending all channels a given user is a member of
+exports.getUserChannels = async (req, res, next) => {
+    const userId = req.user.id;
+    const userUniversityId = req.user.university?.toString();
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const filter = {
+        members: userId,
+        $or: [
+            { isPublic: true },
+            { university: userUniversityId }
+        ]
+    };
+    const channels = await Channel.find(filter)
+        .populate('admin', 'name profilePicUrl email')
+        .populate('university', 'name location')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+    channels.forEach(channel => {
+        channel.memberCount = channel.members ? channel.members.length : 0;
+    });
+    const totalChannels = await Channel.countDocuments(filter);
+    const totalPages = Math.ceil(totalChannels / limit);
+    res.status(200).json({
+        success: true,
+        count: channels.length,
+        hasMore: page < totalPages,
+        pagination: { totalChannels, totalPages, currentPage: page, limit },
+        data: channels
+    });
+};
+
+//sending all channels a given user is not a member of
+exports.getNonMemberChannels = async (req, res, next) => {
+    const userId = req.user.id;
+    const userUniversityId = req.user.university?.toString();
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;  
+    const skip = (page - 1) * limit;
+
+    const orCondition = userUniversityId
+  ? [{ isPublic: true }, { university: userUniversityId }]
+  : [{ isPublic: true }];
+
+    const filter = {
+  members: { $nin: [userId] },
+  $or: orCondition
+};
+
+      
+    const channels = await Channel.find(filter)
+        .populate('admin', 'name profilePicUrl email')
+        .populate('university', 'name location')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+    channels.forEach(channel => {
+        channel.memberCount = channel.members ? channel.members.length : 0;
+    });
+    const totalChannels = await Channel.countDocuments(filter);
+    const totalPages = Math.ceil(totalChannels / limit);
+    res.status(200).json({
+        success: true,
+        count: channels.length,
+        hasMore: page < totalPages,
+        pagination: { totalChannels, totalPages, currentPage: page, limit },
+        data: channels
     });
 };
 

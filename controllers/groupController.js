@@ -588,3 +588,125 @@ exports.kickMember = async (req, res, next) => {
 
   res.status(200).json({ success: true, message: 'Member kicked successfully.' });
 };
+
+// sending groups that the user is a member of with the given userId
+exports.getUserGroups = async (req, res, next) => {
+  const userId = req.user.id;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    const groups = await Group.find({ members: userId })
+      .populate('createdBy', 'name profilePicUrl')
+      .populate('admins', 'name profilePicUrl')
+      .populate('university', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const totalGroups = await Group.countDocuments({ members: userId });
+    const totalPages = Math.ceil(totalGroups / limit);
+
+    res.status(200).json({
+      success: true,
+      count: groups.length,
+      pagination: { totalGroups, totalPages, currentPage: page, limit },
+      data: groups
+    });
+  } catch (error) {
+    console.error("Error fetching user's groups:", error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
+//sending groups that the user created with the given userId
+exports.getUserCreatedGroups = async (req, res, next) => {
+  const userId = req.user.id;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    const groups = await Group.find({ createdBy: userId })
+      .populate('createdBy', 'name profilePicUrl')
+      .populate('admins', 'name profilePicUrl')
+      .populate('university', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const totalGroups = await Group.countDocuments({ createdBy: userId });
+    const totalPages = Math.ceil(totalGroups / limit);
+
+    res.status(200).json({
+      success: true,
+      count: groups.length,
+      pagination: { totalGroups, totalPages, currentPage: page, limit },
+      data: groups
+    });
+  } catch (error) {
+    console.error("Error fetching user's created groups:", error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+// sending that the user is not a member of with the given userId
+exports.getNonMemberGroups = async (req, res, next) => {
+  const userId = req.user.id;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    const groups = await Group.find({ members: { $ne: userId } })
+      .populate('createdBy', 'name profilePicUrl')
+      .populate('admins', 'name profilePicUrl')
+      .populate('university', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const totalGroups = await Group.countDocuments({ members: { $ne: userId } });
+    const totalPages = Math.ceil(totalGroups / limit);
+
+    res.status(200).json({
+      success: true,
+      count: groups.length,
+      pagination: { totalGroups, totalPages, currentPage: page, limit },
+      data: groups
+    });
+  } catch (error) {
+    console.error("Error fetching non-member groups:", error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+};
+
+// allowing a user to join a group without sending a request
+exports.joinGroupWithoutRequest = async (req, res, next) => {
+  const { groupId } = req.params;
+  const userId = req.user.id;
+
+  const group = await Group.findById(groupId).populate('associatedChat', '_id');
+  if (!group) return res.status(404).json({ success: false, error: 'Group not found.' });
+  if (group.members.some(memberId => memberId.equals(userId))) {
+      return res.status(400).json({ success: false, error: 'You are already a member of this group.' });
+  }
+  if (group.privacy !== 'public') {
+      return res.status(403).json({ success: false, error: 'This group is not public.' });
+  }
+  group.members.addToSet(userId);
+  group.joinRequests = group.joinRequests.filter(req => !req.user.equals(userId));
+  await group.save();
+  if (group.associatedChat && group.associatedChat._id) {
+    await Chat.findByIdAndUpdate(group.associatedChat._id, {
+        $addToSet: { participants: userId }
+    });
+    console.log(`User ${userId} added to chat participants for group ${groupId}`);
+  }
+  res.status(200).json({ success: true, message: 'Successfully joined the group.' });
+}
+
+
