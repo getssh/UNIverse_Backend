@@ -363,4 +363,41 @@ exports.getPostsByChannelId = async (req, res, next) => {
       next(error);
     }
   };
+
+//sending posts from all THE CHANNELS from modt like to least like not by channelId but from all channels with pagination
+exports.getPostsByAllChannels = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const posts = await Post.find()
+      .populate('createdBy', 'name profilePicUrl')
+      .populate('group')
+      .populate('channel')
+      .sort({ likes: -1 }) // Sort by likes in descending order
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const totalPosts = await Post.countDocuments();
+    const totalPages = Math.ceil(totalPosts / limit);
+
+    res.status(200).json({
+      success: true,
+      count: posts.length,
+      pagination: {
+        totalPosts,
+        totalPages,
+        currentPage: page,
+        limit,
+      },
+      data: posts,
+    });
+  } catch (error) {
+    console.error("Error getting posts:", error);
+    next(error);
+  }
+};
+
   

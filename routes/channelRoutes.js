@@ -11,7 +11,9 @@ const {
     deleteChannel,
     joinChannel,
     leaveChannel,
-    getChannelMembers
+    getChannelMembers,
+    getUserChannels,
+    getNonMemberChannels
 } = require('../controllers/channelController');
 
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -103,6 +105,22 @@ router.route('/:channelId')
         getChannelById 
     );
 
+router.route('/user/:userId')
+    .get(
+        protect,
+        param('userId', 'Invalid User ID format').isMongoId(),
+        handleValidationErrors,
+        getUserChannels
+    );
+    
+router.route('/non-member/:userId')
+    .get(
+        protect,
+        param('userId', 'Invalid User ID format').isMongoId(),
+        handleValidationErrors,
+        getNonMemberChannels
+    );
+
 router.route('/:channelId/update')
     .put(
       protect,
@@ -140,7 +158,7 @@ router.route('/:channelId/join')
     );
 
 router.route('/:channelId/leave')
-    .delete(
+    .post(
         protect,
         channelIdValidation,
         handleValidationErrors,

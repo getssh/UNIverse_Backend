@@ -6,7 +6,7 @@ const {
     createGroup, getGroups, getGroupById, updateGroup, deleteGroup,
     joinOrRequestToJoinGroup, leaveGroup, getJoinRequests, manageJoinRequest,
     promoteToAdmin, demoteAdmin,
-    promoteToModerator, demoteModerator, kickMember
+    promoteToModerator, demoteModerator, kickMember,getUserGroups,getUserCreatedGroups,getNonMemberGroups,joinGroupWithoutRequest
 } = require('../controllers/groupController');
 
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -132,6 +132,31 @@ router.route('/:groupId')
         deleteGroup
     );
 
+router.get(
+    '/user/:userId',
+    protect,
+    param('userId', 'Invalid User ID format').isMongoId(),
+    handleValidationErrors,
+    getUserGroups
+);
+
+router.get(
+    '/user/:userId/created',
+    protect,
+    param('userId', 'Invalid User ID format').isMongoId(),
+    handleValidationErrors,
+    getUserCreatedGroups
+);
+
+router.get(
+    '/user/:userId/non-member',
+    protect,
+    param('userId', 'Invalid User ID format').isMongoId(),
+    handleValidationErrors,
+    getNonMemberGroups
+);
+
+
 router.post(
     '/:groupId/join',
     protect,
@@ -211,6 +236,13 @@ router.delete(
     memberIdToKickValidation,
     handleValidationErrors,
     kickMember
+);
+router.post(
+    '/:groupId/join-without-request',
+    protect,
+    groupIdValidation,
+    handleValidationErrors,
+    joinGroupWithoutRequest
 );
 
 
