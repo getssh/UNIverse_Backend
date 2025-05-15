@@ -6,6 +6,7 @@ const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const mongoose = require('mongoose');
 const { checkTextContent, checkImageContent } = require('../utils/moderationService');
+const { getIO } = require('../socket');
 
 
 exports.sendMessage = async (req, res, next) => {
@@ -77,6 +78,8 @@ exports.sendMessage = async (req, res, next) => {
             file: fileData,
             readBy: [senderId]
         };
+
+
         let newMessage = await Message.create(messageData);
 
         newMessage = await Message.findById(newMessage._id)
@@ -88,6 +91,14 @@ exports.sendMessage = async (req, res, next) => {
             lastMessage: newMessage._id,
             updatedAt: Date.now()
         });
+
+        try {
+            const io = getIO();
+            io.to(chatId.toString()).emit('newMessage', newMessage);
+            console.log(`Socket event 'newMessage' emitted to room ${chatId}`);
+        } catch (socketError) {
+             console.error("Socket emission error in sendMessage:", socketError.message);
+        }
 
         res.status(201).json({ success: true, data: newMessage });
     } catch (error) {
@@ -180,6 +191,14 @@ exports.editMessage = async (req, res, next) => {
             .populate('sender', 'name profilePicUrl')
             .lean();
 
+        try {
+            const io = getIO();
+            io.to(message.chatId.toString()).emit('messageUpdated', populatedMessage);
+            console.log(`Socket event 'messageUpdated' emitted to room ${message.chatId}`);
+        } catch (socketError) {
+            console.error("Socket emission error in editMessage:", socketError.message);
+        }
+
         res.status(200).json({ success: true, data: populatedMessage });
     } catch (error) {
         next(error);
@@ -223,7 +242,20 @@ exports.deleteMessage = async (req, res, next) => {
             return res.status(403).json({ success: false, error: 'Not authorized to delete this message.' });
         }
 
+        const chatIdForSocket = message.chatId.toString();
+
         await Message.findByIdAndDelete(messageId);
+
+        try {
+            const io = getIO();
+            io.to(chatIdForSocket).emit('messageDeleted', {
+                messageId: messageId,
+                chatId: chatIdForSocket
+            });
+            console.log(`Socket event 'messageDeleted' emitted to room ${chatIdForSocket}`);
+        } catch (socketError) {
+            console.error("Socket emission error in deleteMessage:", socketError.message);
+        }
 
         res.status(200).json({ success: true, message: 'Message deleted successfully.' });
     } catch (error) {
@@ -234,6 +266,7 @@ exports.deleteMessage = async (req, res, next) => {
 exports.markMessagesAsRead = async (req, res, next) => {
     const { chatId } = req.params;
     const userId = req.user.id;
+    const userName = req.user.name;
 
     if (!mongoose.Types.ObjectId.isValid(chatId)) {
         return res.status(400).json({ success: false, error: 'Invalid Chat ID format.' });
@@ -253,6 +286,30 @@ exports.markMessagesAsRead = async (req, res, next) => {
             { $addToSet: { readBy: userId } }
         );
 
+        //emit socket 
+        try {
+            const io = getIO();
+
+            const chat = await Chat.findById(chatId).select('participants');
+            if (chat && chat.participants.some(p => p.equals(userId))) {
+                chat.participants.forEach(participantId => {
+                    if (!participantId.equals(userId)) {
+                      //todo dont send to self(sender)
+                    }
+                });
+
+                 io.to(chatId.toString()).emit('chatMessagesUpdated', {
+                     chatId: chatId,
+                     readerId: userId,
+                     readerName: userName,
+                     message: `${result.modifiedCount} messages marked as read by ${userName}.`
+                 });
+                 console.log(`Socket event 'chatMessagesUpdated' (read status) emitted to room ${chatId}`);
+            }
+        } catch (socketError) {
+            console.error("Socket emission error in markMessagesAsRead:", socketError.message);
+        }
+        
         console.log(`Marked ${result.modifiedCount} messages as read by ${userId} in chat ${chatId}`);
 
         res.status(200).json({ success: true, message: `${result.modifiedCount} messages marked as read.` });
