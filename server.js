@@ -22,6 +22,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const jobRoutes = require('./routes/jobRoutes');
 
 
 const app = express();
@@ -48,6 +49,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/users', userRoutes); 
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/jobs', jobRoutes); 
 
 
 app.get('/', (req, res) => {
