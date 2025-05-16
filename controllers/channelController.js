@@ -475,3 +475,86 @@ exports.getChannelMembers = async (req, res, next) => {
          data: members
      });
 };
+
+// sending channels with search query
+exports.searchChannels = async (req, res, next) => {
+  try {
+    const { query } = req.params;
+    const userId = req.user.id;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    // Validate query exists and is a string
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Search query must be a non-empty string' 
+      });
+    }
+
+    // Create base search query
+    const searchQuery = {
+      $and: [
+        {
+          $or: [
+            { name: { $regex: query.trim(), $options: 'i' } },
+            { description: { $regex: query.trim(), $options: 'i' } }
+          ]
+        }
+      ]
+    };
+
+    
+
+    // Handle membership filters
+    if (req.query.member === 'true') {
+      searchQuery.$and.push({ members: userId });
+    } else if (req.query.member === 'false') {
+      searchQuery.$and.push({ members: { $ne: userId } });
+    } else {
+      // Default: show public channels or channels user is member of
+      searchQuery.$and.push({
+        $or: [
+          { isPublic: true },
+          { members: userId }
+        ]
+      });
+    }
+
+    const [channels, totalChannels] = await Promise.all([
+      Channel.find(searchQuery)
+        .populate('admin', 'name profilePicUrl email')
+        .populate('university', 'name location')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .then(channels => {
+          return channels.map(channel => ({
+            ...channel,
+            memberCount: channel.members?.length || 0
+          }));
+        }),
+      Channel.countDocuments(searchQuery)
+    ]);
+
+    const totalPages = Math.ceil(totalChannels / limit);
+
+    res.status(200).json({
+      success: true,
+      count: channels.length,
+      hasMore: page < totalPages,
+      pagination: { totalChannels, totalPages, currentPage: page, limit },
+      data: channels
+    });
+
+  } catch (error) {
+    console.error("Error searching channels:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Server error',
+      message: error.message 
+    });
+  }
+};
