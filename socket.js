@@ -2,6 +2,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');
 const Chat = require('./models/Chat');
+const Message = require('./models/Message'); 
 
 let io;
 
@@ -108,6 +109,101 @@ function initializeSocket(httpServer) {
                 readerName: socket.user.name,
                 lastReadMessageTimestamp
             });
+        });
+
+        socket.on('chatMessage', async (data, callback) => {
+    try {
+        console.log('Received message on backend:', {
+            chatId: data.chatId,
+            sender: socket.user._id,
+            content: data.content,
+            replyTo: data.replyTo // Add this
+        });
+
+        // Validate input
+        if (!data.chatId || (!data.content && !data.file)) {
+            throw new Error('Both chatId and content/file are required');
+        }
+
+        // Verify user is part of the chat
+        const chat = await Chat.findOne({
+            _id: data.chatId,
+            participants: socket.user._id
+        });
+
+        if (!chat) {
+            throw new Error('User not authorized to send messages to this chat');
+        }
+
+        // Validate replyTo if provided
+        if (data.replyTo) {
+            const repliedMessage = await Message.findOne({
+                _id: data.replyTo,
+                chatId: data.chatId
+            });
+            if (!repliedMessage) {
+                throw new Error('Invalid replied message or not in same chat');
+            }
+        }
+
+        // Create and save message
+        const message = new Message({
+            chatId: data.chatId,
+            sender: socket.user._id,
+            content: data.content,
+            replyTo: data.replyTo, // Add this
+            readBy: [socket.user._id]
+        });
+
+        const savedMessage = await message.save();
+        
+        // Populate sender and replyTo info before sending
+        const populatedMessage = await Message.populate(savedMessage, [
+            {
+                path: 'sender',
+                select: 'name profilePicUrl'
+            },
+            {
+                path: 'replyTo',
+                select: 'content sender',
+                populate: {
+                    path: 'sender',
+                    select: 'name profilePicUrl'
+                }
+            }
+        ]);
+
+        // Update chat's last message
+        await Chat.findByIdAndUpdate(data.chatId, {
+            lastMessage: savedMessage._id,
+            updatedAt: Date.now()
+        });
+
+        // Broadcast to all in the chat room including sender
+        io.to(data.chatId.toString()).emit('newMessage', populatedMessage);
+
+        // Send acknowledgement to sender
+        if (typeof callback === 'function') {
+            callback({
+                status: 'success',
+                message: populatedMessage
+            });
+        }
+
+        console.log('Message successfully processed and broadcasted');
+            } catch (error) {
+                console.error('Error processing message:', error);
+                if (typeof callback === 'function') {
+                    callback({
+                        status: 'error',
+                        error: error.message
+                    });
+                }
+                socket.emit('socketError', {
+                    event: 'chatMessage',
+                    error: error.message
+                });
+            }
         });
 
 
