@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 const getModelForTargetType = (type) => {
     switch (type) {
         case 'Post': return Post;
-        // case 'Group': return Group;
+        case 'Group': return Group;
         case 'Comment': return Comment;
         case 'Channel': return Channel;
         case 'User': return User;

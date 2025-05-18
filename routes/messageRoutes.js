@@ -7,7 +7,8 @@ const {
     getMessagesForChat,
     editMessage,
     deleteMessage,
-    markMessagesAsRead
+    markMessagesAsRead,
+    getFilesForChat
 } = require('../controllers/messageController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -28,8 +29,18 @@ const fileFilter = (req, file, cb) => {
 };
 const uploadMessageFile = multer({
     storage: storage,
-    fileFilter: fileFilter,
-    limits: { fileSize: 10 * 1024 * 1024 }
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only images (JPEG, PNG, GIF) and PDF files are allowed'), false);
+        }
+    },
+    limits: { 
+        fileSize: 10 * 1024 * 1024,
+        files: 1 // Limit to single file
+    }
 });
 
 const handleValidationErrors = (req, res, next) => {
@@ -84,7 +95,16 @@ router.get(
     getMessagesForChat
 );
 
-router.put(
+router.get(
+    '/files/:chatId',
+    protect,
+    chatIdValidation,
+    getMessagesQueryValidation,
+    handleValidationErrors,
+    getFilesForChat
+);
+
+router.post(
     '/:messageId',
     protect,
     messageIdValidation,
