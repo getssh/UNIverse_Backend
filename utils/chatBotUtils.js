@@ -1,4 +1,3 @@
-// utils/chatApi.js
 const axios = require('axios');
 
 const chatWithDeepSeek = async (message) => {
