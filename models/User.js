@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema({
     phoneNumber: String,
     profilePicUrl: {
         type: String,
-        default: 'URL_TO_DEFAULT_PROFILE_PIC',
+        default: 'https://res.cloudinary.com/dvtc6coe2/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_gray,b_rgb:262c35/v1747589687/profile_placeholder_hgefwu.jpg',
     },
     idCardUrl: String,
     verified: {
