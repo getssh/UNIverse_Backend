@@ -20,11 +20,11 @@ const groupSchema = new mongoose.Schema(
             maxlength: [1000, 'Group description cannot exceed 1000 characters.']
         },
         profilePic: {
-            url: { type: String, default: 'URL_TO_DEFAULT_GROUP_ICON_PLACEHOLDER' },
+            url: { type: String, default: 'https://res.cloudinary.com/dvtc6coe2/image/upload/v1747591152/group_profile_placeholder_vr2dci.png' },
             publicId: { type: String }
         },
         coverPhoto: {
-            url: { type: String, default: 'URL_TO_DEFAULT_GROUP_COVER_PLACEHOLDER' },
+            url: { type: String, default: 'https://res.cloudinary.com/dvtc6coe2/image/upload/v1747590802/group_cover_placeholder_dfyxmt.jpg' },
             publicId: { type: String }
         },
         createdBy: {
