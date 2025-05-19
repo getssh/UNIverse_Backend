@@ -2,9 +2,9 @@ const axios = require('axios');
 
 const chatWithDeepSeek = async (message) => {
   const response = await axios.post(
-    'https://api.deepinfra.com/v1/openai/chat/completions',
+    'https://api.together.xyz/v1/chat/completions',
     {
-      model: "deepseek-ai/DeepSeek-R1-Turbo",
+      model: "deepseek-ai/DeepSeek-V3",
       "messages": [
         {
           "role": "user",
@@ -14,7 +14,7 @@ const chatWithDeepSeek = async (message) => {
     },
     {
       headers: {
-        Authorization: `Bearer ${process.env.DEEPINFRA_API_KEY}`,
+        Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
         'Content-Type': 'application/json'
       }
     }

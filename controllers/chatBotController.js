@@ -12,7 +12,7 @@ const chatController = async (req, res) => {
     const reply = result.choices[0].message.content || 'No response from model';
     res.json({ reply });
   } catch (error) {
-    console.error('DeepInfra API Error:', error.message);
+    console.error('Toge API Error:', error.message);
     res.status(500).json({ error: 'Failed to fetch response' });
   }
 };
