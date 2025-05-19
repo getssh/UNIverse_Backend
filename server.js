@@ -7,8 +7,9 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./config/db'); 
 const errorHandler = require('./middleware/errorMiddleware');
-const cookieParser = require('cookie-parser'); 
-const userRoutes = require('./routes/userRoutes'); 
+const cookieParser = require('cookie-parser');
+const http = require('http');
+const { initializeSocket } = require('./socket');
 
 connectDB(); 
 
@@ -23,7 +24,8 @@ const groupRoutes = require('./routes/groupRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const eventRoutes = require('./routes/eventsRoutes');
-
+const userRoutes = require('./routes/userRoutes');
+const chatBotRoutes = require('./routes/chatBotRoutes');
 
 const app = express();
 
@@ -50,6 +52,10 @@ app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/chat-bot', chatBotRoutes);
+
+const httpServer = http.createServer(app);
+const io = initializeSocket(httpServer);
 
 
 app.get('/', (req, res) => {
@@ -62,8 +68,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
+const server = httpServer.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    console.log('Socket.IO is listening for connections.');
 });
 
 

@@ -35,6 +35,15 @@ exports.checkTextContent = async (text) => {
 
 exports.checkImageContent = async (imageUrl) => {
   try {
+    // Check if the URL ends with common image extensions
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+    const isImage = imageExtensions.some(ext => imageUrl.toLowerCase().endsWith(ext));
+    
+    if (!isImage) {
+      // If it's not an image, return as safe (or handle differently)
+      return { isSafe: true, details: { skipped: 'Not an image file' } };
+    }
+
     const response = await axios.get(`${SIGHTENGINE_BASE_URL}/check.json`, {
       params: {
         url: imageUrl,

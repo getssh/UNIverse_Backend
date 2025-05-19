@@ -6,10 +6,11 @@ const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const mongoose = require('mongoose');
 const { checkTextContent, checkImageContent } = require('../utils/moderationService');
+const { getIO } = require('../socket');
 
 
 exports.sendMessage = async (req, res, next) => {
-    const { chatId, content } = req.body;
+     const { chatId, content, replyTo } = req.body; 
     const senderId = req.user.id;
     const file = req.file;
 
@@ -30,6 +31,16 @@ exports.sendMessage = async (req, res, next) => {
         }
         if (!chat.participants.some(p => p.equals(senderId))) {
             return res.status(403).json({ success: false, error: 'You are not a participant of this chat.' });
+        }
+
+         if (replyTo) {
+            if (!mongoose.Types.ObjectId.isValid(replyTo)) {
+                return res.status(400).json({ success: false, error: 'Invalid replyTo message ID format.' });
+            }
+            const repliedMessage = await Message.findById(replyTo);
+            if (!repliedMessage || !repliedMessage.chatId.equals(chatId)) {
+                return res.status(400).json({ success: false, error: 'Invalid replied message or not in same chat.' });
+            }
         }
 
         let fileData = null;
@@ -71,12 +82,19 @@ exports.sendMessage = async (req, res, next) => {
         }
 
         const messageData = {
-            chatId: chatId,
-            sender: senderId,
-            content: content?.trim(),
-            file: fileData,
-            readBy: [senderId]
-        };
+        chatId: chatId,
+        sender: senderId,
+        content: content?.trim(), // Optional content
+        file: fileData, // Can be null
+        readBy: [senderId],
+        replyTo: replyTo 
+    };
+
+    if ((!content || content.trim() === '') && fileData) {
+        messageData.content = undefined;
+    }
+
+
         let newMessage = await Message.create(messageData);
 
         newMessage = await Message.findById(newMessage._id)
@@ -88,6 +106,14 @@ exports.sendMessage = async (req, res, next) => {
             lastMessage: newMessage._id,
             updatedAt: Date.now()
         });
+
+        try {
+            const io = getIO();
+            io.to(chatId.toString()).emit('newMessage', newMessage);
+            console.log(`Socket event 'newMessage' emitted to room ${chatId}`);
+        } catch (socketError) {
+             console.error("Socket emission error in sendMessage:", socketError.message);
+        }
 
         res.status(201).json({ success: true, data: newMessage });
     } catch (error) {
@@ -117,9 +143,16 @@ exports.getMessagesForChat = async (req, res, next) => {
             return res.status(403).json({ success: false, error: 'Not authorized to view messages for this chat.' });
         }
 
-        const messages = await Message.find({ chatId: chatId })
+         const messages = await Message.find({ chatId: chatId })
             .populate('sender', 'name profilePicUrl')
-            .populate('reactions.user', 'name')
+            .populate({
+                path: 'replyTo',
+                select: 'content sender file',
+                populate: {
+                    path: 'sender',
+                    select: 'name profilePicUrl'
+                }
+            })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
@@ -178,7 +211,23 @@ exports.editMessage = async (req, res, next) => {
 
         const populatedMessage = await Message.findById(message._id)
             .populate('sender', 'name profilePicUrl')
+            .populate({
+                path: 'replyTo',
+                select: 'content sender file',
+                populate: {
+                    path: 'sender',
+                    select: 'name profilePicUrl'
+                }
+            })
             .lean();
+
+        try {
+            const io = getIO();
+            io.to(message.chatId.toString()).emit('messageUpdated', populatedMessage);
+            console.log(`Socket event 'messageUpdated' emitted to room ${message.chatId}`);
+        } catch (socketError) {
+            console.error("Socket emission error in editMessage:", socketError.message);
+        }
 
         res.status(200).json({ success: true, data: populatedMessage });
     } catch (error) {
@@ -223,7 +272,20 @@ exports.deleteMessage = async (req, res, next) => {
             return res.status(403).json({ success: false, error: 'Not authorized to delete this message.' });
         }
 
+        const chatIdForSocket = message.chatId.toString();
+
         await Message.findByIdAndDelete(messageId);
+
+        try {
+            const io = getIO();
+            io.to(chatIdForSocket).emit('messageDeleted', {
+                messageId: messageId,
+                chatId: chatIdForSocket
+            });
+            console.log(`Socket event 'messageDeleted' emitted to room ${chatIdForSocket}`);
+        } catch (socketError) {
+            console.error("Socket emission error in deleteMessage:", socketError.message);
+        }
 
         res.status(200).json({ success: true, message: 'Message deleted successfully.' });
     } catch (error) {
@@ -234,6 +296,7 @@ exports.deleteMessage = async (req, res, next) => {
 exports.markMessagesAsRead = async (req, res, next) => {
     const { chatId } = req.params;
     const userId = req.user.id;
+    const userName = req.user.name;
 
     if (!mongoose.Types.ObjectId.isValid(chatId)) {
         return res.status(400).json({ success: false, error: 'Invalid Chat ID format.' });
@@ -253,9 +316,62 @@ exports.markMessagesAsRead = async (req, res, next) => {
             { $addToSet: { readBy: userId } }
         );
 
+        //emit socket 
+        try {
+            const io = getIO();
+
+            const chat = await Chat.findById(chatId).select('participants');
+            if (chat && chat.participants.some(p => p.equals(userId))) {
+                chat.participants.forEach(participantId => {
+                    if (!participantId.equals(userId)) {
+                      //todo dont send to self(sender)
+                    }
+                });
+
+                 io.to(chatId.toString()).emit('chatMessagesUpdated', {
+                     chatId: chatId,
+                     readerId: userId,
+                     readerName: userName,
+                     message: `${result.modifiedCount} messages marked as read by ${userName}.`
+                 });
+                 console.log(`Socket event 'chatMessagesUpdated' (read status) emitted to room ${chatId}`);
+            }
+        } catch (socketError) {
+            console.error("Socket emission error in markMessagesAsRead:", socketError.message);
+        }
+        
         console.log(`Marked ${result.modifiedCount} messages as read by ${userId} in chat ${chatId}`);
 
         res.status(200).json({ success: true, message: `${result.modifiedCount} messages marked as read.` });
+    } catch (error) {
+        next(error);
+    }
+};
+
+//send only files that are not images pdf, docx, etc that posted on the given chat
+exports.getFilesForChat = async (req, res, next) => {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+        return res.status(400).json({ success: false, error: 'Invalid Chat ID format.' });
+    }
+
+    try {
+        const chat = await Chat.findById(chatId).select('participants');
+        if (!chat) {
+            return res.status(404).json({ success: false, error: 'Chat not found.' });
+        }
+        if (!chat.participants.some(p => p.equals(userId))) {
+            return res.status(403).json({ success: false, error: 'Not authorized to view files in this chat.' });
+        }
+
+        const files = await Message.find({ chatId: chatId, file: { $exists: true, $ne: null } })
+            .populate('sender', 'name profilePicUrl')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        res.status(200).json({ success: true, data: files });
     } catch (error) {
         next(error);
     }

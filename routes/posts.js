@@ -105,7 +105,7 @@ router.get(
   getPostsByAllChannels
 );
 
-router.put(
+router.post(
   '/:postId/like',
   protect,
   postIdValidation,

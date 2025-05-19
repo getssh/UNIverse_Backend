@@ -27,10 +27,17 @@ const messageSchema = new mongoose.Schema(
             required: [true, 'Message must have a sender.'],
             index: true
         },
+        replyTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Message'
+        },
         content: {
             type: String,
             trim: true,
-            required: function() { return !this.fileUrl; }
+            required: function() { 
+                // Make content required only if there's no file
+                return !this.file || !this.file.url; 
+            }
         },
         file: {
             url: { type: String },

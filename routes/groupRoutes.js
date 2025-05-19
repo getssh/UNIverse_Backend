@@ -6,7 +6,7 @@ const {
     createGroup, getGroups, getGroupById, updateGroup, deleteGroup,
     joinOrRequestToJoinGroup, leaveGroup, getJoinRequests, manageJoinRequest,
     promoteToAdmin, demoteAdmin,
-    promoteToModerator, demoteModerator, kickMember,getUserGroups,getUserCreatedGroups,getNonMemberGroups,joinGroupWithoutRequest
+    promoteToModerator, demoteModerator, kickMember,getUserGroups,getUserCreatedGroups,getNonMemberGroups,joinGroupWithoutRequest,searchGroups
 } = require('../controllers/groupController');
 
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -243,6 +243,27 @@ router.post(
     groupIdValidation,
     handleValidationErrors,
     joinGroupWithoutRequest
+);
+
+router.get(
+  '/search/:query', // Changed to use URL parameter
+  protect,
+  [
+    param('query')
+      .trim()
+      .notEmpty().withMessage('Search query is required')
+      .isLength({ min: 1}).withMessage('Search query must be at least 1 characters'),
+    query('page')
+      .optional()
+      .isInt({ min: 1 }).withMessage('Page must be a positive integer')
+      .toInt(),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
+      .toInt()
+  ],
+  handleValidationErrors,
+  searchGroups
 );
 
 

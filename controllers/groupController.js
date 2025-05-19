@@ -6,6 +6,7 @@ const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const cloudinary = require('../config/cloudinary');
 const mongoose = require('mongoose');
 const Chat = require('../models/Chat');
+const { getIO } = require('../socket');
 
 const isGroupAdmin = (group, userId) => {
   return group.admins.some(adminId => adminId.equals(userId));
@@ -324,9 +325,17 @@ exports.joinOrRequestToJoinGroup = async (req, res, next) => {
       await group.save();
 
       if (group.associatedChat && group.associatedChat._id) {
-        await Chat.findByIdAndUpdate(group.associatedChat._id, {
-            $addToSet: { participants: userId }
-        });
+        const updatedChat = await Chat.findByIdAndUpdate(group.associatedChat._id,
+            { $addToSet: { participants: userId } },
+            { new: true }
+        ).populate('participants', 'name profilePicUrl');
+        try {
+            getIO().to(group.associatedChat._id.toString()).emit('chatParticipantsUpdated', {
+                chatId: group.associatedChat._id,
+                participants: updatedChat.participants
+            });
+        } catch (e) { console.error("Socket emit error:", e.message); }
+
         console.log(`User ${userId} added to chat participants for group ${groupId}`);
       }
 
@@ -369,9 +378,19 @@ exports.leaveGroup = async (req, res, next) => {
   await group.save();
 
   if (group.associatedChat && group.associatedChat._id) {
-    await Chat.findByIdAndUpdate(group.associatedChat._id, {
-        $pull: { participants: userId }
-    });
+    const updatedChat = await Chat.findByIdAndUpdate(group.associatedChat._id,
+        { $pull: { participants: userId } },
+        { new: true }
+    ).populate('participants', 'name profilePicUrl');
+    if (updatedChat) {
+        try {
+            getIO().to(group.associatedChat._id.toString()).emit('chatParticipantsUpdated', {
+                chatId: group.associatedChat._id,
+                participants: updatedChat.participants
+            });
+        } catch (e) { console.error("Socket emit error:", e.message); }
+      
+    }
     console.log(`User ${userId} removed from chat participants for group ${groupId}`);
   }
 
@@ -421,9 +440,17 @@ exports.manageJoinRequest = async (req, res, next) => {
       await group.save();
 
       if (group.associatedChat && group.associatedChat._id) {
-        await Chat.findByIdAndUpdate(group.associatedChat._id, {
-            $addToSet: { participants: requestId }
-        });
+        const updatedChat = await Chat.findByIdAndUpdate(group.associatedChat._id,
+            { $addToSet: { participants: requestId } },
+            { new: true }
+        ).populate('participants', 'name profilePicUrl');
+        try {
+            getIO().to(group.associatedChat._id.toString()).emit('chatParticipantsUpdated', {
+                chatId: group.associatedChat._id,
+                participants: updatedChat.participants
+            });
+        } catch (e) { console.error("Socket emit error:", e.message); }
+
         console.log(`User ${requestId} (approved) added to chat for group ${groupId}`);
       }
 
@@ -578,10 +605,19 @@ exports.kickMember = async (req, res, next) => {
   await group.save();
 
   if (group.associatedChat && group.associatedChat._id) {
-      await Chat.findByIdAndUpdate(group.associatedChat._id, {
-          $pull: { participants: memberIdToKick }
-      });
-      console.log(`Kicked user ${memberIdToKick} removed from chat for group ${groupId}`);
+    const updatedChat = await Chat.findByIdAndUpdate(group.associatedChat._id,
+        { $pull: { participants: memberIdToKick } },
+        { new: true }
+    ).populate('participants', 'name profilePicUrl');
+    if (updatedChat) {
+        try {
+            getIO().to(group.associatedChat._id.toString()).emit('chatParticipantsUpdated', {
+                chatId: group.associatedChat._id,
+                participants: updatedChat.participants
+            });
+        } catch (e) { console.error("Socket emit error:", e.message); }
+    }
+    console.log(`Kicked user ${memberIdToKick} removed from chat for group ${groupId}`);
   }
 
   console.log(`Member ${memberIdToKick} kicked from group ${groupId} by staff ${currentStaffId}`);
@@ -709,4 +745,58 @@ exports.joinGroupWithoutRequest = async (req, res, next) => {
   res.status(200).json({ success: true, message: 'Successfully joined the group.' });
 }
 
+//sending groups with search query
+exports.searchGroups = async (req, res, next) => {
+  try {
+    // Get query from URL params (since frontend uses /search/:query)
+    const { query } = req.params;
+    const userId = req.user.id;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
 
+    // Validate query exists and is a string
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Search query must be a non-empty string' 
+      });
+    }
+
+    const searchQuery = {
+      name: { 
+        $regex: query.trim(), // Ensure string and trim whitespace
+        $options: 'i' // Case insensitive
+      }
+    };
+
+    const [groups, totalGroups] = await Promise.all([
+      Group.find(searchQuery)
+        .populate('createdBy', 'name profilePicUrl')
+        .populate('admins', 'name profilePicUrl')
+        .populate('university', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Group.countDocuments(searchQuery)
+    ]);
+
+    const totalPages = Math.ceil(totalGroups / limit);
+
+    res.status(200).json({
+      success: true,
+      count: groups.length,
+      pagination: { totalGroups, totalPages, currentPage: page, limit },
+      data: groups
+    });
+
+  } catch (error) {
+    console.error("Error searching groups:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Server error',
+      message: error.message 
+    });
+  }
+};
