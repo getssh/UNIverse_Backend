@@ -31,7 +31,7 @@ const universitySchema = new mongoose.Schema(
         logoUrl: {
             type: String,
             trim: true,
-            default: 'URL_TO_DEFAULT_UNIVERSITY_LOGO_PLACEHOLDER'
+            default: 'https://res.cloudinary.com/dvtc6coe2/image/upload/v1747590439/channel_pro_placeholder_wduo6q.png'
         },
         contactEmail: {
              type: String,
