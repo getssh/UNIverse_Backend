@@ -107,8 +107,7 @@ const eventSchema = new mongoose.Schema(
         status: {
             type: String,
             enum: ['upcoming', 'ongoing', 'past', 'cancelled', 'postponed'],
-            default: 'upcoming',
-            index: true
+            default: 'upcoming'
         }
     },
     {
