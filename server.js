@@ -26,6 +26,8 @@ const messageRoutes = require('./routes/messageRoutes');
 const userRoutes = require('./routes/userRoutes');
 const chatBotRoutes = require('./routes/chatBotRoutes');
 
+const { setupJobScrapingCron } = require('./utils/jobScraperCron.js');
+
 
 const app = express();
 
