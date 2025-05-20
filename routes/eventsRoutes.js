@@ -149,7 +149,7 @@ router.route('/')
 
 router.route('/:eventId')
     .get(
-        protect, // Optional
+        protect,
         eventIdValidation,
         handleValidationErrors,
         getEventById
