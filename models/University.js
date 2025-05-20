@@ -56,7 +56,7 @@ const universitySchema = new mongoose.Schema(
         status: {
             type: String,
             enum: ['pending_approval', 'active', 'suspended', 'inactive'],
-            default: 'pending_approval',
+            default: 'active',
             index: true
         }
     },
@@ -68,7 +68,7 @@ const universitySchema = new mongoose.Schema(
 );
 
 
-universitySchema.index({ name: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } });
+universitySchema.index({ unique: true, collation: { locale: 'en', strength: 2 } });
 universitySchema.index({ universityAdmins: 1 });
 
 

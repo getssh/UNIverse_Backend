@@ -14,7 +14,17 @@ const {
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
-const upload = multer()
+
+const storage = multer.memoryStorage();
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith('image')) cb(null, true);
+    else cb(new Error('Logo must be an image file.'), false);
+};
+const uploadLogo = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: { fileSize: 2 * 1024 * 1024 }
+});
 
 
 const handleValidationErrors = (req, res, next) => {
@@ -28,14 +38,36 @@ const universityIdValidation = [
     param('universityId', 'Invalid University ID format').isMongoId()
 ];
 
-const universityBodyValidation = [
+const updateUniversityBodyValidation = [
+  body('name', 'University name is required').optional().trim().notEmpty(),
+  body('universityAdmins').optional().isArray(), 
+  body('universityAdmins.*').optional().isMongoId(),
+  body('description').optional().trim().isLength({ max: 1000 }),
+  body('location').optional().trim().isLength({ max: 200 }),
+  body('websiteUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Please provide a valid website URL.'),
+  body('logoUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Please provide a valid logo URL.'),
+  body('contactEmail').optional({ checkFalsy: true }).trim().isEmail().normalizeEmail().withMessage('Please provide a valid contact email.'),
+  body('contactPhone').optional().trim(),
+  body('universityAdmins').optional().isArray().withMessage('universityAdmins must be an array.'),
+  body('universityAdmins.*').optional().isMongoId().withMessage('Each universityAdmin ID must be valid.'),
+  body('status').optional().isIn(['pending_approval', 'active', 'suspended', 'inactive'])
+               .withMessage('Invalid status value.')
+];
+
+const createUniversityBodyValidation = [
     body('name', 'University name is required').trim().notEmpty().isLength({ max: 150 }),
+    body('universityAdmins').optional().isArray(), 
+    body('universityAdmins.*').optional().isMongoId(),
     body('description').optional().trim().isLength({ max: 1000 }),
     body('location').optional().trim().isLength({ max: 200 }),
     body('websiteUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Please provide a valid website URL.'),
     body('logoUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Please provide a valid logo URL.'),
     body('contactEmail').optional({ checkFalsy: true }).trim().isEmail().normalizeEmail().withMessage('Please provide a valid contact email.'),
-    body('contactPhone').optional().trim()
+    body('contactPhone').optional().trim(),
+    body('universityAdmins').optional().isArray().withMessage('universityAdmins must be an array.'),
+    body('universityAdmins.*').optional().isMongoId().withMessage('Each universityAdmin ID must be valid.'),
+    body('status').optional().isIn(['pending_approval', 'active', 'suspended', 'inactive'])
+                 .withMessage('Invalid status value.')
 ];
 
 const getUniversitiesQueryValidation = [
@@ -48,12 +80,12 @@ const getUniversitiesQueryValidation = [
 
 router.route('/')
     .post(
-        protect,
-        authorize('admin'),
-        upload.single('logo'),
-        universityBodyValidation,
-        handleValidationErrors,
-        createUniversity
+      protect,
+      authorize(['admin']),
+      uploadLogo.single('logo'),
+      createUniversityBodyValidation,
+      handleValidationErrors,
+      createUniversity
     )
     .get(
         getUniversitiesQueryValidation,
@@ -70,16 +102,17 @@ router.route('/:universityId')
         getUniversityById
     )
     .put(
-        protect,
-        authorize('admin'), 
-        universityIdValidation,
-        universityBodyValidation,
-        handleValidationErrors, 
-        updateUniversity 
+      protect,
+      authorize(['admin']),
+      uploadLogo.single('logo'),
+      universityIdValidation,
+      updateUniversityBodyValidation,
+      handleValidationErrors,
+      updateUniversity
     )
     .delete(
         protect,
-        authorize('admin'),
+        authorize(['admin']),
         universityIdValidation,
         handleValidationErrors,
         deleteUniversity
