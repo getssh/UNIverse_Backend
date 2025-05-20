@@ -80,7 +80,7 @@ exports.createEvent = async (req, res, next) => {
             registrationLink: registrationLink?.trim(),
             createdBy,
             organizers: finalOrganizers,
-            attendees: [createdBy, ...finalOrganizers],
+            attendees: [...finalOrganizers],
         };
 
         const newEventArray = await Event.create([eventData], { session });
@@ -210,53 +210,98 @@ exports.getEventById = async (req, res, next) => {
 
 
 exports.updateEvent = async (req, res, next) => {
-    const { eventId } = req.params;
-    const updateData = { ...req.body };
-    const coverImageFile = req.files?.coverImage?.[0];
-    const userId = req.user.id;
+  const { eventId } = req.params;
+  const requestBody = { ...req.body };
+  const coverImageFile = req.file;
+  const userId = req.user.id;
 
-    let event = await Event.findById(eventId);
-    if (!event) {
-        return res.status(404).json({ success: false, error: `Event not found.` });
-    }
+  // console.log('Update Event Body:', requestBody);
+  // console.log('Update Event File:', coverImageFile);
 
-    if (!isEventOrganizerOrCreator(event, userId) && req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, error: 'Not authorized to update this event.' });
-    }
+  let event = await Event.findById(eventId);
+  if (!event) {
+      return res.status(404).json({ success: false, error: `Event not found.` });
+  }
 
-    delete updateData.createdBy;
-    delete updateData.attendees;
-    delete updateData.associatedChat;
-    delete updateData.university;
+  if (!isEventOrganizerOrCreator(event, userId) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Not authorized to update this event.' });
+  }
+
+  const updateData = {};
+
+  const allowedFieldsToUpdate = [
+      'title', 'description', 'startDateTime', 'endDateTime',
+      'eventType', 'maxAttendees', 'registrationDeadline', 'registrationLink', 'organizers'
+  ];
+
+  for (const key of allowedFieldsToUpdate) {
+      if (requestBody[key] !== undefined) {
+          if (typeof requestBody[key] === 'string') {
+              updateData[key] = requestBody[key].trim();
+          } else {
+              updateData[key] = requestBody[key];
+          }
+      }
+  }
+
+  if (requestBody.organizers && Array.isArray(requestBody.organizers)) {
+      updateData.organizers = [
+          ...new Set([
+              event.createdBy.toString(),
+              ...requestBody.organizers.filter(id => mongoose.Types.ObjectId.isValid(id))
+          ])
+      ];
+  }
 
 
-    let oldCoverImagePublicId = event.coverImage?.publicId;
-    if (coverImageFile) {
-        try {
-            const result = await uploadToCloudinary(coverImageFile.buffer, coverImageFile.originalname, 'event_covers', 'image');
-            updateData.coverImage = { url: result.secure_url, publicId: result.public_id };
-        } catch (uploadError) { console.error(uploadError); }
-    } else if (updateData.coverImage === null || updateData.coverImage === '') {
-        updateData.coverImage = { url: Event.schema.path('coverImage.url').defaultValue, publicId: null };
-    }
+  if (requestBody.location && typeof requestBody.location === 'string') {
+      try {
+          updateData.location = JSON.parse(requestBody.location);
+          // TODO: Add validations for lcation elements ?
+          if (typeof updateData.location.isOnline !== 'boolean') {
+              delete updateData.location;
+              console.warn("Location 'isOnline' was invalid after parsing, removing from update.");
+          }
+      } catch (e) {
+          console.warn('Invalid JSON for location, ignoring location update:', e.message);
+          return res.status(400).json({ success: false, error: 'Invalid JSON format for location data.' });
+      }
+  } else if (requestBody.location && typeof requestBody.location === 'object') {
+      updateData.location = requestBody.location;
+  }
 
+  let oldCoverImagePublicId = event.coverImage?.publicId;
+  if (coverImageFile) {
+      try {
+          const result = await uploadToCloudinary(coverImageFile.buffer, coverImageFile.originalname, 'event_covers', 'image');
+          updateData.coverImage = { url: result.secure_url, publicId: result.public_id };
+          console.log("New cover image uploaded:", updateData.coverImage.url);
+      } catch (uploadError) {
+          console.error("Cover image upload failed during update:", uploadError);
+      }
+  } else if (requestBody.coverImage === null || requestBody.coverImage === '') {
+      updateData.coverImage = { url: Event.schema.path('coverImage.url').defaultValue, publicId: null };
+      console.log("Cover image flagged for removal.");
+  } 
 
-     if (updateData.organizers && Array.isArray(updateData.organizers)) {
-         updateData.organizers = [...new Set([event.createdBy.toString(), ...updateData.organizers.filter(id => mongoose.Types.ObjectId.isValid(id))])];
-     } else {
-         delete updateData.organizers;
-     }
+  if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, error: 'No update data provided.' });
+  }
 
+  const updatedEvent = await Event.findByIdAndUpdate(eventId, { $set: updateData }, { new: true, runValidators: true })
+      .populate('createdBy organizers university associatedChat', 'name profilePicUrl _id');
 
-    event = await Event.findByIdAndUpdate(eventId, { $set: updateData }, { new: true, runValidators: true })
-        .populate('createdBy organizers university associatedChat', 'name profilePicUrl _id');
+  if (!updatedEvent) {
+      return res.status(404).json({ success: false, error: 'Event not found during update operation.' });
+  }
 
+  if (updateData.coverImage && oldCoverImagePublicId && oldCoverImagePublicId !== updateData.coverImage.publicId) {
+      console.log(`Deleting old cover image: ${oldCoverImagePublicId}`);
+      cloudinary.uploader.destroy(oldCoverImagePublicId).catch(err => console.error("Cloudinary old image delete error:", err));
+  }
 
-    if (updateData.coverImage && oldCoverImagePublicId && oldCoverImagePublicId !== updateData.coverImage.publicId) {
-        cloudinary.uploader.destroy(oldCoverImagePublicId).catch(console.error);
-    }
-
-    res.status(200).json({ success: true, data: event });
+  console.log(`Event ${eventId} updated successfully.`);
+  res.status(200).json({ success: true, data: updatedEvent });
 };
 
 
