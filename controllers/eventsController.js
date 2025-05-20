@@ -19,9 +19,11 @@ const isEventOrganizerOrCreator = (event, userId) => {
 exports.createEvent = async (req, res, next) => {
     const {
         title, description, university, startDateTime, endDateTime,
-        location, eventType, maxAttendees, registrationDeadline, registrationLink, organizers = []
+        eventType, maxAttendees, registrationDeadline, registrationLink, organizers = []
     } = req.body;
-    const coverImageFile = req.files?.coverImage?.[0];
+    const location = JSON.parse(req.body.location) || {};
+
+    const coverImageFile = req.file;
     const createdBy = req.user.id;
 
     if (!title || !description || !university || !startDateTime || !endDateTime || !location || !eventType) {
@@ -51,9 +53,7 @@ exports.createEvent = async (req, res, next) => {
                     await session.abortTransaction(); session.endSession();
                     return res.status(400).json({ success: false, error: 'Cover image must be an image file.' });
                 }
-                const result = await uploadToCloudinary(
-                    coverImageFile.buffer, coverImageFile.originalname, 'event_covers', 'image'
-                );
+                const result = await uploadToCloudinary(coverImageFile.buffer, coverImageFile.originalname, 'event_covers', 'image');
                 coverImageData = { url: result.secure_url, publicId: result.public_id };
             } catch (uploadError) {
                 await session.abortTransaction(); session.endSession();
@@ -257,7 +257,8 @@ exports.updateEvent = async (req, res, next) => {
   if (requestBody.location && typeof requestBody.location === 'string') {
       try {
           updateData.location = JSON.parse(requestBody.location);
-          // TODO: Add validations for lcation elements ?
+          console.log('Parsed location:', updateData.location);
+          // TODO: Add validations for lcation elements? we can check if isOnline updated and check required fields...
           if (typeof updateData.location.isOnline !== 'boolean') {
               delete updateData.location;
               console.warn("Location 'isOnline' was invalid after parsing, removing from update.");

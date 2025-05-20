@@ -67,7 +67,7 @@ const eventBodyValidation = [
             return true;
         }),
    
-    body('location').optional().isObject().withMessage('Location must be an object.'),
+    // body('location').optional().isObject().withMessage('Location must be an object.'),
     body('location.address').optional({ checkFalsy: true }).trim().isString(),
     body('location.city').optional({ checkFalsy: true }).trim().isString(),
     body('location.stateOrProvince').optional({ checkFalsy: true }).trim().isString(),
@@ -92,8 +92,8 @@ const createEventBodyValidation = [
     body('university', 'University ID is required.').isMongoId(),
     body('startDateTime', 'Start date/time is required.').isISO8601().toDate(),
     body('endDateTime', 'End date/time is required.').isISO8601().toDate(),
-    body('location', 'Location details are required.').notEmpty().isObject(),
-    body('location.isOnline', 'location.isOnline (true/false) is required.').isBoolean(),
+    // body('location', 'Location details are required.').notEmpty().isObject(),
+    // body('location.isOnline', 'location.isOnline (true/false) is required.').isBoolean(),
     body().custom((value, {req}) => {
         if (req.body.location?.isOnline === true && !req.body.location?.meetingUrl) {
             throw new Error('Meeting URL is required for online events.');
