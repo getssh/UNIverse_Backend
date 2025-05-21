@@ -41,12 +41,14 @@ exports.createPost = async (req, res, next) => {
                 return res.status(401).json({success: false, error: `User not associated with a university`})
             }
 
+            if (!channelExists) {
+                return res.status(404).json({success: false, error: `Channel not found with ID: ${channelId}`})
+            }
+
             const channelUniversity = channelExists.university;
             const isSameUniversity = userUniversity.equals(channelUniversity);
 
-            if (!channelExists) {
-                return res.status(404).json({ success: false, error: `Channel not found with ID: ${channelId}` });
-            } else if (!isSameUniversity) {
+          if (!isSameUniversity) {
                 return res.status(401).json({success: false, error: `Not authorized to create a post in this channel`})
             }
         }
