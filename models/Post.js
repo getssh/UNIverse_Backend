@@ -60,6 +60,13 @@ postSchema.virtual('likeCount').get(function() {
     return this.likes ? this.likes.length : 0;
 });
 
+postSchema.virtual('commentCount', {
+  ref: 'Comment',          
+  localField: '_id',       
+  foreignField: 'postId',  
+  count: true            
+});
+
 
 postSchema.pre('remove', async function(next) {
   console.log(`'remove' hook: Cleaning up for post ${this._id}...`);

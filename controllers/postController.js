@@ -241,6 +241,7 @@ exports.getPosts = async (req, res, next) => {
           .populate('createdBy', 'name profilePicUrl')
           .populate('group', 'name') 
           .populate('channel', 'name')
+          .populate('commentCount')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)
@@ -356,6 +357,7 @@ exports.getPostsByChannelId = async (req, res, next) => {
         .populate('createdBy', 'name profilePicUrl')
         .populate('group')
         .populate('channel')
+        .populate('commentCount')
         .sort({ createdAt: -1 })
         .lean();
   
@@ -381,6 +383,7 @@ exports.getPostsByAllChannels = async (req, res, next) => {
       .populate('createdBy', 'name profilePicUrl')
       .populate('group')
       .populate('channel')
+      .populate('commentCount')
       .sort({ likes: -1 }) // Sort by likes in descending order
       .skip(skip)
       .limit(limit)
