@@ -40,8 +40,6 @@ const universityIdValidation = [
 
 const updateUniversityBodyValidation = [
   body('name', 'University name is required').optional().trim().notEmpty(),
-  body('universityAdmins').optional().isArray(), 
-  body('universityAdmins.*').optional().isMongoId(),
   body('description').optional().trim().isLength({ max: 1000 }),
   body('location').optional().trim().isLength({ max: 200 }),
   body('websiteUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Please provide a valid website URL.'),
