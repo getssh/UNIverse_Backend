@@ -62,7 +62,7 @@ exports.createChannel = async (req, res, next) => {
         }
 
     }
-                let members = [adminUserId]; // Start with the admin
+            let members = [adminUserId]; // Start with the admin
             try {
                 const universityUsers = await User.find({ university: university }).select('_id');
                 const userIds = universityUsers.map(user => user._id.toString());

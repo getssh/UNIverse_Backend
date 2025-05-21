@@ -23,7 +23,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
-const eventRoutes = require('./routes/eventsRoutes');
+const eventRoutes = require('./routes/eventRoutes');
 const userRoutes = require('./routes/userRoutes');
 const chatBotRoutes = require('./routes/chatBotRoutes');
 
