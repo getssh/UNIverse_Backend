@@ -3,6 +3,39 @@ const sendEmail = require('../utils/emailSender');
 const crypto = require('crypto');
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
 const jwt = require('jsonwebtoken');
+// const cloudinary = require('../config/cloudinary');
+const cloudinary = require('cloudinary').v2;
+const mongoose = require('mongoose');
+const { analyzeIdCardWithOCR } = require('../utils/ocrUtils');
+
+
+function determineRoleFromText(text) {
+  if (!text) return null;
+
+  const lowerText = text.toLowerCase();
+
+
+  if (lowerText.includes('faculty id') || lowerText.includes('professor id') || lowerText.includes('staff id')) {
+      return 'teacher';
+  }
+  if (lowerText.includes('teacher id') || lowerText.includes('instructor id')) {
+      return 'teacher';
+  }
+  if (lowerText.includes('student id') || lowerText.includes('student card')) {
+      return 'student';
+  }
+
+
+  if (lowerText.includes('faculty') || lowerText.includes('professor') || lowerText.includes('instructor')) {
+      return 'teacher';
+  }
+  if (lowerText.includes('student')) {
+      return 'student';
+  }
+
+  console.log('Could not determine role from OCR text.');
+  return null;
+}
 
 exports.registerUser = async (req, res, next) => {
     const { name, email, password, role, university, department, faculty, studyLevel, gender, phoneNumber } = req.body;
@@ -14,10 +47,23 @@ exports.registerUser = async (req, res, next) => {
     //      return res.status(400).json({ success: false, error: 'ID Card image is required for registration.' });
     // }
 
+    if (!idCardFile) {
+      return res.status(400).json({ success: false, error: 'ID Card image is required for registration and role assignment.' });
+    }
+    if (!name || !email || !password ) {
+        return res.status(400).json({ success: false, error: 'Name, email, and password are required.' });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    let idCardUploadResult;
+
     try {
-        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        const existingUser = await User.findOne({ email: email.toLowerCase() }).session(session);
         if (existingUser) {
-            return res.status(409).json({ success: false, error: 'An account with this email already exists.' });
+          await session.abortTransaction(); session.endSession();
+          return res.status(409).json({ success: false, error: 'An account with this email already exists.' });
         }
 
         let profilePicUrl = null;
@@ -43,20 +89,48 @@ exports.registerUser = async (req, res, next) => {
                 uploadToCloudinary(idCardFile.buffer, idCardFile.originalname, 'id_cards', 'image')
                  .then(result => {
                         idCardUrl = result.secure_url;
-                        idCardPublicId = result.public_id;
+                        idCardUploadResult = result;
                         console.log("ID Card Uploaded:", idCardUrl);
                     })
             );
         }
 
         await Promise.all(uploadPromises);
-        console.log("File uploads completed (if any).");
+        console.log("File uploads completed.");
+
+        if (!idCardUploadResult || !idCardUploadResult.public_id) {
+          await session.abortTransaction(); session.endSession();
+          if (profilePicUrl && profilePicUrl.includes('cloudinary')) { /*remove profile pic*/ }
+          return res.status(500).json({ success: false, error: 'ID Card upload failed or did not return necessary data.' });
+        }
+
+        let determinedRole = null;
+        let ocrText = null;
+        try {
+            ocrText = await analyzeIdCardWithOCR(idCardUploadResult.secure_url);
+            if (ocrText) {
+                determinedRole = determineRoleFromText(ocrText);
+            }
+        } catch (ocrError) {
+            console.error('OCR processing step failed:', ocrError.message);
+        }
+
+        // if (!determinedRole) {
+        //   await session.abortTransaction(); session.endSession();
+        //   return res.status(400).json({ success: false, error: 'Could not determine role from ID card. Please try again with a clearer image.' });
+        // }
+
+        // if (role && role !== determinedRole) {
+        //   await session.abortTransaction(); session.endSession();
+        //   return res.status(400).json({ success: false, error: 'Role mismatch. Please use the role determined from the ID card.' });
+        // }
+
 
         const user = new User({
             name,
             email: email.toLowerCase(),
             password,
-            role,
+            role: determinedRole || 'student',
             university,
             department,
             faculty,
@@ -69,8 +143,13 @@ exports.registerUser = async (req, res, next) => {
 
         const verificationToken = user.createVerificationToken();
 
-        await user.save();
+        await user.save({ session });
         console.log(`User ${user.email} created successfully with ID: ${user._id}`);
+
+        await session.commitTransaction();
+        session.endSession();
+
+        console.log(`User ${user.email} registered. Determined role: ${user.role}. ID Card verified: ${user.verified}`);
 
         const verificationUrl = `${process.env.CLIENT_URL}/api/auth/verify-email/${verificationToken}`;
         const emailMessage = `
