@@ -17,120 +17,200 @@ const isEventOrganizerOrCreator = (event, userId) => {
 
 
 exports.createEvent = async (req, res, next) => {
-    const {
-        title, description, university, startDateTime, endDateTime,
-        eventType, maxAttendees, registrationDeadline, registrationLink, organizers = []
-    } = req.body;
-    const location = JSON.parse(req.body.location) || {};
-
-    const coverImageFile = req.file;
     const createdBy = req.user.id;
-
-    if (!title || !description || !university || !startDateTime || !endDateTime || !location || !eventType) {
-        return res.status(400).json({ success: false, error: 'Please provide all required event fields.' });
-    }
-
-    if (location.isOnline && !location.meetingUrl) {
-        return res.status(400).json({ success: false, error: 'Meeting URL is required for online events.' });
-    }
-
-
+    const coverImageFile = req.file;
+    let coverImageData = {}; // Define at the top to avoid reference errors
+    
+    // Initialize session
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const uniExists = await University.findById(university).session(session);
-        if (!uniExists) {
-            await session.abortTransaction(); session.endSession();
-            return res.status(404).json({ success: false, error: `University not found with ID: ${university}` });
+        // Parse location carefully
+        let location;
+        try {
+            location = req.body.location ? JSON.parse(req.body.location) : {};
+        } catch (err) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Invalid location data format' 
+            });
         }
 
-        let coverImageData = {};
+        // Validate physical event requirements
+        if (!location.isOnline) {
+            const requiredLocationFields = ['address', 'city', 'country'];
+            const missingFields = requiredLocationFields.filter(field => !location[field]);
+            
+            if (missingFields.length > 0) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ 
+                    success: false, 
+                    error: `Physical events require: ${missingFields.join(', ')}` 
+                });
+            }
+        }
+
+        // Validate required fields
+        const requiredFields = [
+            'title', 'description', 'university', 
+            'startDateTime', 'endDateTime', 'eventType'
+        ];
+        
+        const missingFields = requiredFields.filter(field => !req.body[field]);
+        if (missingFields.length > 0) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ 
+                success: false, 
+                error: `Missing required fields: ${missingFields.join(', ')}` 
+            });
+        }
+
+        // Validate online event requirements
+        if (location.isOnline && !location.meetingUrl) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Meeting URL is required for online events' 
+            });
+        }
+
+        // Validate university exists
+        const uniExists = await University.findById(req.body.university).session(session);
+        if (!uniExists) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ 
+                success: false, 
+                error: `University not found with ID: ${req.body.university}` 
+            });
+        }
+
+        // Handle cover image upload
         if (coverImageFile) {
             try {
                 const resourceType = getResourceTypeFromMime(coverImageFile.mimetype);
                 if (resourceType !== 'image') {
-                    await session.abortTransaction(); session.endSession();
-                    return res.status(400).json({ success: false, error: 'Cover image must be an image file.' });
+                    await session.abortTransaction();
+                    session.endSession();
+                    return res.status(400).json({ 
+                        success: false, 
+                        error: 'Cover image must be an image file' 
+                    });
                 }
-                const result = await uploadToCloudinary(coverImageFile.buffer, coverImageFile.originalname, 'event_covers', 'image');
-                coverImageData = { url: result.secure_url, publicId: result.public_id };
+
+                const result = await uploadToCloudinary(
+                    coverImageFile.buffer, 
+                    coverImageFile.originalname, 
+                    'event_covers', 
+                    'image'
+                );
+                coverImageData = { 
+                    url: result.secure_url, 
+                    publicId: result.public_id 
+                };
             } catch (uploadError) {
-                await session.abortTransaction(); session.endSession();
+                await session.abortTransaction();
+                session.endSession();
                 console.error("Event cover image upload failed:", uploadError);
-                return res.status(500).json({ success: false, error: `Failed to upload cover image: ${uploadError.message}` });
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Failed to upload cover image' 
+                });
             }
         }
 
+        // Prepare organizers list
+        const organizers = req.body.organizers || [];
+        const finalOrganizers = [
+            ...new Set([
+                createdBy, 
+                ...organizers.filter(id => mongoose.Types.ObjectId.isValid(id))
+            ])
+        ];
 
-        const finalOrganizers = [...new Set([createdBy, ...organizers.filter(id => mongoose.Types.ObjectId.isValid(id))])];
-
-
+        // Create event data
         const eventData = {
-            title: title.trim(),
-            description: description.trim(),
-            coverImage: coverImageData.url ? coverImageData : undefined,
-            university,
-            startDateTime,
-            endDateTime,
+            title: req.body.title.trim(),
+            description: req.body.description.trim(),
+            university: req.body.university,
+            startDateTime: req.body.startDateTime,
+            endDateTime: req.body.endDateTime,
             location,
-            eventType,
-            maxAttendees,
-            registrationDeadline,
-            registrationLink: registrationLink?.trim(),
+            eventType: req.body.eventType,
+            maxAttendees: req.body.maxAttendees,
+            registrationDeadline: req.body.registrationDeadline,
+            registrationLink: req.body.registrationLink?.trim(),
             createdBy,
             organizers: finalOrganizers,
             attendees: [...finalOrganizers],
+            ...(coverImageData.url && { coverImage: coverImageData })
         };
 
-        const newEventArray = await Event.create([eventData], { session });
-        let newEvent = newEventArray[0];
-
+        // Create event and associated chat
+        const [newEvent] = await Event.create([eventData], { session });
+        
         const chatData = {
             name: `Event: ${newEvent.title}`,
             chatType: 'event_chat',
             participants: [...newEvent.attendees],
             event: newEvent._id,
         };
-        const newChatArray = await Chat.create([chatData], { session });
-        const newChat = newChatArray[0];
+        const [newChat] = await Chat.create([chatData], { session });
 
-
+        // Update event with chat reference
         newEvent.associatedChat = newChat._id;
         await newEvent.save({ session });
 
-
+        // Commit transaction
         await session.commitTransaction();
         session.endSession();
 
-        console.log(`Event '${newEvent.title}' and associated chat ${newChat._id} created successfully.`);
-
-        newEvent = await Event.findById(newEvent._id)
+        // Populate and return the created event
+        const populatedEvent = await Event.findById(newEvent._id)
             .populate('createdBy', 'name profilePicUrl')
             .populate('organizers', 'name profilePicUrl')
             .populate('university', 'name')
             .populate('associatedChat', '_id name')
             .lean();
 
-        res.status(201).json({ success: true, data: newEvent });
+        console.log(`Event '${newEvent.title}' created successfully`);
+        res.status(201).json({ success: true, data: populatedEvent });
 
     } catch (error) {
+        // Handle any errors
         await session.abortTransaction();
         session.endSession();
-        console.error("Error creating event or associated chat:", error);
-        if (coverImageData.publicId) cloudinary.uploader.destroy(coverImageData.publicId).catch(console.error);
-        next(error);
+        console.error("Error creating event:", error);
+        
+        if (coverImageData?.publicId) {
+            try {
+                await cloudinary.uploader.destroy(coverImageData.publicId);
+            } catch (cleanupError) {
+                console.error("Error cleaning up cover image:", cleanupError);
+            }
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            error: error.message || 'An error occurred while creating the event' 
+        });
     }
 };
 
 
 exports.getEvents = async (req, res, next) => {
     const userId = req.user?.id;
-    const userUniversity = req.user?.university;
+    // Removed userUniversity from the filter logic
 
     const filter = {};
+    // Only apply university filter if explicitly requested
     if (req.query.universityId) filter.university = req.query.universityId;
-    else if (userUniversity) filter.university = userUniversity;
 
     if (req.query.eventType) filter.eventType = req.query.eventType;
     if (req.query.status) filter.status = req.query.status;
@@ -153,14 +233,12 @@ exports.getEvents = async (req, res, next) => {
          filter.startDateTime = { $gte: new Date(req.query.startDate), $lte: new Date(req.query.endDate) };
     }
 
-
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
     let sort = { startDateTime: 1 };
     if (req.query.sort === 'attendees') sort = { attendeeCountVirtual: -1 };
     else if (req.query.sort === 'newest') sort = { createdAt: -1 };
-
 
     const events = await Event.find(filter)
         .populate('createdBy', 'name profilePicUrl')
@@ -344,7 +422,7 @@ exports.toggleEventAttendance = async (req, res, next) => {
 
     if (req.method === 'POST') {
         if (isAttending) {
-            return res.status(400).json({ success: false, error: 'You are already registered for this event.' });
+            return res.status(200).json({ success: false, error: 'You are already registered for this event.' });
         }
         if (event.isFull) {
             return res.status(400).json({ success: false, error: 'This event has reached its maximum attendee limit.' });
@@ -427,3 +505,5 @@ exports.getEventAttendees = async (req, res, next) => {
         data: attendees
     });
 };
+
+
