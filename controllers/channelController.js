@@ -80,6 +80,7 @@ exports.createChannel = async (req, res, next) => {
         channelType: channelType,
         members,
         members: [adminUserId],
+        admin: adminUserId,
         isPublic: isPublic !== undefined ? isPublic : true
     };
 
