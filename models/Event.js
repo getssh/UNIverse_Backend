@@ -16,6 +16,11 @@ const locationSchema = new mongoose.Schema({
       trim: true,
       match: [/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/, 'Please provide a valid meeting URL.']
   },
+  locationUrl: {
+      type: String,
+      trim: true,
+      match: [/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/, 'Please provide a valid location URL.']
+  },
   additionalDetails: { type: String, trim: true, maxlength: 200 }
 }, { _id: false });
 
