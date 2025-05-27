@@ -41,7 +41,7 @@ exports.createEvent = async (req, res, next) => {
 
         // Validate physical event requirements
         if (!location.isOnline) {
-            const requiredLocationFields = ['address', 'city', 'country'];
+            const requiredLocationFields = ['address', 'city', 'country', 'locationUrl'];
             const missingFields = requiredLocationFields.filter(field => !location[field]);
             
             if (missingFields.length > 0) {

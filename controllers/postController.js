@@ -384,7 +384,13 @@ exports.getPostsByAllChannels = async (req, res, next) => {
     const posts = await Post.find()
       .populate('createdBy', 'name profilePicUrl')
       .populate('group')
-      .populate('channel')
+      .populate({
+        path: 'channel',
+        populate: {
+          path: 'university',
+          select: 'name logo.url'
+        }
+      })
       .populate('commentCount')
       .sort({ likes: -1 }) // Sort by likes in descending order
       .skip(skip)
