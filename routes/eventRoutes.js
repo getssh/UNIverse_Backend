@@ -129,6 +129,11 @@ const getAttendeesQueryValidation = [
 
 
 
+/**
+ * @route   POST api/events
+ * @desc    Create a new event
+ * @access  Private
+ */
 router.route('/')
     .post(
         protect,
@@ -139,6 +144,12 @@ router.route('/')
         handleValidationErrors,
         createEvent
     )
+
+/**
+ * @route   GET api/events
+ * @desc    Get events
+ * @access  Private
+ */
     .get(
         protect,
         getEventsQueryValidation,
@@ -147,6 +158,11 @@ router.route('/')
     );
 
 
+/**
+ * @route   GET api/events/:eventId
+ * @desc    Get an event by ID
+ * @access  Private
+ */
 router.route('/:eventId')
     .get(
         protect,
@@ -154,6 +170,12 @@ router.route('/:eventId')
         handleValidationErrors,
         getEventById
     )
+
+/**
+ * @route   PUT api/events/:eventId
+ * @desc    Update an event
+ * @access  Private
+ */
     .put(
         protect,
         uploadCoverImage.single('coverImage'),
@@ -162,6 +184,12 @@ router.route('/:eventId')
         handleValidationErrors,
         updateEvent
     )
+
+/**
+ * @route   DELETE api/events/:eventId
+ * @desc    Delete an event
+ * @access  Private
+ */
     .delete(
         protect,
         authorize(['admin']),
@@ -171,6 +199,11 @@ router.route('/:eventId')
     );
 
 
+/**
+ * @route   POST api/events/:eventId/attend
+ * @desc    Attend an event
+ * @access  Private
+ */
 router.route('/:eventId/attend')
     .post(
         protect,
@@ -178,6 +211,12 @@ router.route('/:eventId/attend')
         handleValidationErrors,
         toggleEventAttendance
     )
+
+/**
+ * @route   DELETE api/events/:eventId/attend
+ * @desc    Leave an event
+ * @access  Private
+ */
     .delete(
         protect,
         eventIdValidation,
@@ -186,6 +225,11 @@ router.route('/:eventId/attend')
     );
 
 
+/**
+ * @route   GET api/events/:eventId/attendees
+ * @desc    Get event attendees
+ * @access  Private
+ */
 router.get(
     '/:eventId/attendees',
     protect,

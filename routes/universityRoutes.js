@@ -76,6 +76,11 @@ const getUniversitiesQueryValidation = [
 
 
 
+/**
+ * @route   POST api/universities
+ * @desc    Create a new university
+ * @access  Private
+ */
 router.route('/')
     .post(
       protect,
@@ -91,14 +96,23 @@ router.route('/')
         getUniversities
     );
 
-
-
+/**
+ * @route   GET api/universities/:universityId
+ * @desc    Get a university by ID
+ * @access  Private
+ */
 router.route('/:universityId')
     .get(
         universityIdValidation,
         handleValidationErrors,
         getUniversityById
     )
+
+/**
+ * @route   PUT api/universities/:universityId
+ * @desc    Update a university
+ * @access  Private
+ */
     .put(
       protect,
       authorize(['admin']),
@@ -108,6 +122,12 @@ router.route('/:universityId')
       handleValidationErrors,
       updateUniversity
     )
+
+/**
+ * @route   DELETE api/universities/:universityId
+ * @desc    Delete a university
+ * @access  Private
+ */
     .delete(
         protect,
         authorize(['admin']),

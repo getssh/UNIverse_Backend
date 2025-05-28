@@ -77,6 +77,11 @@ const getMessagesQueryValidation = [
     query('limit').optional().isInt({ min: 1, max: 50 }).toInt()
 ];
 
+/**
+ * @route   POST api/messages
+ * @desc    Send a message
+ * @access  Private
+ */
 router.post(
     '/',
     protect,
@@ -86,6 +91,11 @@ router.post(
     sendMessage
 );
 
+/**
+ * @route   GET api/messages/:chatId
+ * @desc    Get messages for a chat
+ * @access  Private
+ */
 router.get(
     '/:chatId',
     protect,
@@ -95,6 +105,11 @@ router.get(
     getMessagesForChat
 );
 
+/**
+ * @route   GET api/messages/files/:chatId
+ * @desc    Get files for a chat
+ * @access  Private
+ */
 router.get(
     '/files/:chatId',
     protect,
@@ -104,6 +119,11 @@ router.get(
     getFilesForChat
 );
 
+/**
+ * @route   POST api/messages/:messageId
+ * @desc    Edit a message
+ * @access  Private
+ */
 router.post(
     '/:messageId',
     protect,
@@ -114,6 +134,11 @@ router.post(
 );
 
 
+/**
+ * @route   DELETE api/messages/:messageId
+ * @desc    Delete a message
+ * @access  Private
+ */
 router.delete(
     '/:messageId',
     protect,
@@ -122,6 +147,11 @@ router.delete(
     deleteMessage
 );
 
+/**
+ * @route   PUT api/messages/read/:chatId
+ * @desc    Mark messages as read
+ * @access  Private
+ */
 router.put(
     '/read/:chatId',
     protect,

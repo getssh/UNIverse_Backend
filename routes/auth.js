@@ -59,6 +59,10 @@ const loginValidationRules = [
 
 // --- Authentication Routes ---
 
+// @route   POST api/auth/register
+// @desc    Register a new user
+// @access  Public
+
 router.post(
     '/register',
     upload.fields([
@@ -70,7 +74,15 @@ router.post(
     registerUser
 );
 
+// @route   GET api/auth/verify-email/:token
+// @desc    Verify user email
+// @access  Public
+
 router.get('/verify-email/:token', verifyEmail)
+
+// @route   POST api/auth/login
+// @desc    Login user
+// @access  Public
 
 router.post(
   '/login',

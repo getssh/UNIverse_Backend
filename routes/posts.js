@@ -55,6 +55,11 @@ const updatePostValidationRules = [
 
 
 
+/**
+ * @route   POST api/posts
+ * @desc    Create a new post
+ * @access  Private
+ */
 router.post(
     '/',
     protect,
@@ -62,6 +67,11 @@ router.post(
     createPost
 );
 
+/**
+ * @route   PUT api/posts/:postId
+ * @desc    Update a post
+ * @access  Private
+ */
 router.put(
   '/:postId',
   protect,
@@ -71,6 +81,11 @@ router.put(
   updatePost
 );
 
+/**
+ * @route   DELETE api/posts/:postId
+ * @desc    Delete a post
+ * @access  Private
+ */
 router.delete(
   '/:postId',
   protect,
@@ -79,8 +94,18 @@ router.delete(
   deletePost
 );
 
+/**
+ * @route   GET api/posts
+ * @desc    Get posts
+ * @access  Private
+ */
 router.get('/', protect, getPosts); //shuld this be public, or keep protected?
 
+/**
+ * @route   GET api/posts/:postId
+ * @desc    Get a post by ID
+ * @access  Private
+ */
 router.get(
   '/:postId',
   protect,
@@ -90,6 +115,11 @@ router.get(
 );
 
 //post with channelId
+/**
+ * @route   GET api/posts/channel/:channelId
+ * @desc    Get posts by channel ID
+ * @access  Private
+ */
 router.get(
   '/channel/:channelId',
   protect,
@@ -98,6 +128,11 @@ router.get(
   getPostsByChannelId
 );
 //post with all channels
+/**
+ * @route   GET api/posts/channels/allChannels
+ * @desc    Get posts by all channels
+ * @access  Private
+ */
 router.get(
   '/channels/allChannels',
   protect,
@@ -105,6 +140,11 @@ router.get(
   getPostsByAllChannels
 );
 
+/**
+ * @route   POST api/posts/:postId/like
+ * @desc    Like a post
+ * @access  Private
+ */
 router.post(
   '/:postId/like',
   protect,
@@ -113,6 +153,11 @@ router.post(
   likePost
 );
 
+/**
+ * @route   POST api/posts/:postId/comments
+ * @desc    Create a comment
+ * @access  Private
+ */
 router.route('/:postId/comments')
     .post(
         protect,
@@ -121,6 +166,12 @@ router.route('/:postId/comments')
         handleValidationErrors,
         createComment
     )
+
+/**
+ * @route   GET api/posts/:postId/comments
+ * @desc    Get comments for a post
+ * @access  Private
+ */
     .get(
         postIdValidation,
         handleValidationErrors,

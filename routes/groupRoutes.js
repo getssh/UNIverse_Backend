@@ -89,6 +89,11 @@ const getGroupsQueryValidation = [
 ];
 
 
+/**
+ * @route   POST api/groups
+ * @desc    Create a new group
+ * @access  Private
+ */
 router.route('/')
     .post(
         protect,
@@ -107,6 +112,11 @@ router.route('/')
         getGroups
     );
 
+/**
+ * @route   GET api/groups/:groupId
+ * @desc    Get a group by ID
+ * @access  Private
+ */
 router.route('/:groupId')
     .get(
         protect,
@@ -132,6 +142,11 @@ router.route('/:groupId')
         deleteGroup
     );
 
+/**
+ * @route   GET api/groups/user/:userId
+ * @desc    Get user groups
+ * @access  Private
+ */
 router.get(
     '/user/:userId',
     protect,
@@ -140,6 +155,11 @@ router.get(
     getUserGroups
 );
 
+/**
+ * @route   GET api/groups/user/:userId/created
+ * @desc    Get user created groups
+ * @access  Private
+ */
 router.get(
     '/user/:userId/created',
     protect,
@@ -148,6 +168,11 @@ router.get(
     getUserCreatedGroups
 );
 
+/**
+ * @route   GET api/groups/user/:userId/non-member
+ * @desc    Get non-member groups
+ * @access  Private
+ */
 router.get(
     '/user/:userId/non-member',
     protect,
@@ -157,6 +182,11 @@ router.get(
 );
 
 
+/**
+ * @route   POST api/groups/:groupId/join
+ * @desc    Join a group
+ * @access  Private
+ */
 router.post(
     '/:groupId/join',
     protect,
@@ -166,6 +196,11 @@ router.post(
     joinOrRequestToJoinGroup
 );
 
+/**
+ * @route   DELETE api/groups/:groupId/leave
+ * @desc    Leave a group
+ * @access  Private
+ */
 router.delete(
     '/:groupId/leave',
     protect,
@@ -174,6 +209,11 @@ router.delete(
     leaveGroup
 );
 
+/**
+ * @route   GET api/groups/:groupId/join-requests
+ * @desc    Get join requests
+ * @access  Private
+ */
 router.get(
     '/:groupId/join-requests',
     protect,
@@ -182,6 +222,11 @@ router.get(
     getJoinRequests
 );
 
+/**
+ * @route   PUT api/groups/:groupId/join-requests/:requestId
+ * @desc    Manage join request
+ * @access  Private
+ */
 router.put(
     '/:groupId/join-requests/:requestId',
     protect,
@@ -193,6 +238,11 @@ router.put(
 );
 
 
+/**
+ * @route   PUT api/groups/:groupId/members/:memberId/promote-admin
+ * @desc    Promote a member to admin
+ * @access  Private
+ */
 router.put(
     '/:groupId/members/:memberId/promote-admin',
     protect,
@@ -202,6 +252,11 @@ router.put(
     promoteToAdmin
 );
 
+/**
+ * @route   PUT api/groups/:groupId/admins/:adminIdToRemove/demote
+ * @desc    Demote an admin
+ * @access  Private
+ */
 router.put(
     '/:groupId/admins/:adminIdToRemove/demote',
     protect,
@@ -211,6 +266,11 @@ router.put(
     demoteAdmin
 );
 
+/**
+ * @route   PUT api/groups/:groupId/members/:memberId/promote-moderator
+ * @desc    Promote a member to moderator
+ * @access  Private
+ */
 router.put(
     '/:groupId/members/:memberId/promote-moderator',
     protect,
@@ -220,6 +280,11 @@ router.put(
     promoteToModerator
 );
 
+/**
+ * @route   PUT api/groups/:groupId/moderators/:moderatorIdToRemove/demote
+ * @desc    Demote a moderator
+ * @access  Private
+ */
 router.put(
     '/:groupId/moderators/:moderatorIdToRemove/demote',
     protect,
@@ -229,6 +294,11 @@ router.put(
     demoteModerator
 );
 
+/**
+ * @route   DELETE api/groups/:groupId/members/:memberIdToKick/kick
+ * @desc    Kick a member
+ * @access  Private
+ */
 router.delete(
     '/:groupId/members/:memberIdToKick/kick',
     protect,
@@ -237,6 +307,12 @@ router.delete(
     handleValidationErrors,
     kickMember
 );
+
+/**
+ * @route   POST api/groups/:groupId/join-without-request
+ * @desc    Join a group without request
+ * @access  Private
+ */
 router.post(
     '/:groupId/join-without-request',
     protect,
@@ -245,6 +321,11 @@ router.post(
     joinGroupWithoutRequest
 );
 
+/**
+ * @route   GET api/groups/search/:query
+ * @desc    Search groups
+ * @access  Private
+ */
 router.get(
   '/search/:query', // Changed to use URL parameter
   protect,

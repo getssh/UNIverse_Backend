@@ -76,7 +76,11 @@ const getMembersQueryValidation = [
      query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
 ];
 
-
+/**
+ * @route   POST api/channels
+ * @desc    Create a new channel
+ * @access  Private
+ */
 router.route('/')
     .post(
         protect,
@@ -98,6 +102,11 @@ router.route('/')
         getChannels 
     );
 
+/**
+ * @route   GET api/channels/:channelId
+ * @desc    Get a channel by ID
+ * @access  Private
+ */
 router.route('/:channelId')
     .get(
         protect, 
@@ -106,6 +115,11 @@ router.route('/:channelId')
         getChannelById 
     );
 
+/**
+ * @route   GET api/channels/user/:userId
+ * @desc    Get channels by user ID
+ * @access  Private
+ */
 router.route('/user/:userId')
     .get(
         protect,
@@ -114,6 +128,11 @@ router.route('/user/:userId')
         getUserChannels
     );
     
+/**
+ * @route   GET api/channels/non-member/:userId
+ * @desc    Get non-member channels by user ID
+ * @access  Private
+ */
 router.route('/non-member/:userId')
     .get(
         protect,
@@ -122,6 +141,11 @@ router.route('/non-member/:userId')
         getNonMemberChannels
     );
 
+/**
+ * @route   PUT api/channels/:channelId/update
+ * @desc    Update a channel
+ * @access  Private
+ */
 router.route('/:channelId/update')
     .put(
       protect,
@@ -137,6 +161,11 @@ router.route('/:channelId/update')
       updateChannel
     );
 
+/**
+ * @route   DELETE api/channels/:channelId/delete
+ * @desc    Delete a channel
+ * @access  Private
+ */
 router.route('/:channelId/delete') 
     .delete(
       protect,
@@ -150,6 +179,11 @@ router.route('/:channelId/delete')
       deleteChannel
     );
 
+/**
+ * @route   POST api/channels/:channelId/join
+ * @desc    Join a channel
+ * @access  Private
+ */
 router.route('/:channelId/join')
     .post(
         protect,
@@ -158,6 +192,11 @@ router.route('/:channelId/join')
         joinChannel
     );
 
+/**
+ * @route   POST api/channels/:channelId/leave
+ * @desc    Leave a channel
+ * @access  Private
+ */
 router.route('/:channelId/leave')
     .post(
         protect,
@@ -166,6 +205,11 @@ router.route('/:channelId/leave')
         leaveChannel
     );
 
+/**
+ * @route   GET api/channels/:channelId/members
+ * @desc    Get channel members
+ * @access  Private
+ */
 router.route('/:channelId/members')
     .get(
         protect,
@@ -175,6 +219,11 @@ router.route('/:channelId/members')
         getChannelMembers
     );
 
+/**
+ * @route   GET api/channels/search/:query
+ * @desc    Search channels
+ * @access  Private
+ */
 router.get(
   '/search/:query', // Changed to use URL parameter
   protect,
