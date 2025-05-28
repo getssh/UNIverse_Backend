@@ -302,8 +302,7 @@ exports.verifyEmail = async (req, res, next) => {
              message: 'Email verified successfully! You can now log in.'
          });
 
-        // TODO Redirect to frontend login page
-        // res.redirect(`${process.env.CLIENT_URL}/login?verified=true`)
+        res.redirect(`${process.env.CLIENT_URL}/login`)
 
     } catch (error) {
         console.error("Email Verification Error:", error);
