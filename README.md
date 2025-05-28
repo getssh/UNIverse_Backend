@@ -134,6 +134,12 @@ To ensure a safe and supportive digital environment, the platform integrates AI-
     -   Users can create posts within groups or channels, with optional file attachments.
     -   Like/unlike posts and comments.
     -   Threaded commenting system on posts.
+-   **AI Model Integration**
+    -   Uploaded (image/text) content is filtered with AI
+    -   Ensures user safety from online bullying and harassment 
+-   **AI Chatbot**
+    -   Users can ask the chatbot any question they want
+    -   Users can easily access the chatbot from the landing page
 -   **Event Management:**
     -   Users (with appropriate permissions) can create university events.
     *   Structured event location (physical address or online meeting URL).
