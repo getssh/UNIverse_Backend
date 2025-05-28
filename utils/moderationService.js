@@ -5,6 +5,11 @@ const SIGHTENGINE_API_SECRET = process.env.SIGHTENGINE_API_SECRET;
 
 const SIGHTENGINE_BASE_URL = 'https://api.sightengine.com/1.0';
 
+/**
+ * Checks the text content for moderation.
+ * @param {string} text - The text to check.
+ * @returns {Promise<object>} The result of the moderation.
+ */
 exports.checkTextContent = async (text) => {
   try {
     const response = await axios.get(`${SIGHTENGINE_BASE_URL}/text/check.json`, {
@@ -33,6 +38,11 @@ exports.checkTextContent = async (text) => {
   }
 };
 
+/**
+ * Checks the image content for moderation.
+ * @param {string} imageUrl - The URL of the image to check.
+ * @returns {Promise<object>} The result of the moderation.
+ */
 exports.checkImageContent = async (imageUrl) => {
   try {
     // Check if the URL ends with common image extensions
