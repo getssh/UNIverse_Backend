@@ -18,6 +18,11 @@ const isGroupStaff = (group, userId) => {
   return isAdmin || isModerator;
 };
 
+/**
+ * @route   POST api/groups
+ * @desc    Create a new group
+ * @access  Private
+ */
 exports.createGroup = async (req, res, next) => {
     const { name, description, groupType, privacy, university, rules, tags } = req.body;
     const profilePicFile = req.files?.profilePic?.[0];
@@ -120,6 +125,11 @@ exports.createGroup = async (req, res, next) => {
     }
 };
 
+/**
+ * @route   GET api/groups
+ * @desc    Get groups
+ * @access  Private
+ */
 exports.getGroups = async (req, res, next) => {
     const userId = req.user.id;
     const userRole = req.user.role;
@@ -188,6 +198,11 @@ exports.getGroups = async (req, res, next) => {
 };
 
 
+/**
+ * @route   GET api/groups/:groupId
+ * @desc    Get a group by ID
+ * @access  Private
+ */
 exports.getGroupById = async (req, res, next) => {
     const { groupId } = req.params;
     const userId = req.user.id;
@@ -230,6 +245,11 @@ exports.getGroupById = async (req, res, next) => {
     res.status(200).json({ success: true, data: group });
 };
 
+/**
+ * @route   PUT api/groups/:groupId
+ * @desc    Update a group
+ * @access  Private
+ */
 exports.updateGroup = async (req, res, next) => {
     const { groupId } = req.params;
     const userId = req.user.id;
@@ -280,6 +300,11 @@ exports.updateGroup = async (req, res, next) => {
 };
 
 
+/**
+ * @route   DELETE api/groups/:groupId
+ * @desc    Delete a group
+ * @access  Private
+ */
 exports.deleteGroup = async (req, res, next) => {
     const { groupId } = req.params;
     const userId = req.user.id;
@@ -297,6 +322,11 @@ exports.deleteGroup = async (req, res, next) => {
 };
 
 
+/**
+ * @route   POST api/groups/:groupId/join
+ * @desc    Join a group
+ * @access  Private
+ */
 exports.joinOrRequestToJoinGroup = async (req, res, next) => {
   const { groupId } = req.params;
   const userId = req.user.id;

@@ -7,7 +7,19 @@ const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const cloudinary = require('../config/cloudinary');
 const { checkTextContent, checkImageContent } = require('../utils/moderationService');
 
-
+/**
+ * Creates a new post with optional file attachments
+ * @param {Object} req - Express request object
+ * @param {Object} req.body - Request body containing post data
+ * @param {string} req.body.content - Text content of the post
+ * @param {string} [req.body.groupId] - ID of the group if post belongs to a group
+ * @param {string} [req.body.channelId] - ID of the channel if post belongs to a channel
+ * @param {Array} [req.files] - Array of files to be attached to the post
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with created post data or error message
+ * @throws {Error} If post creation fails or file upload fails
+ */
 exports.createPost = async (req, res, next) => {
     const { content, groupId, channelId } = req.body;
     const userId = req.user.id;
@@ -141,6 +153,18 @@ exports.createPost = async (req, res, next) => {
     }
 };
 
+/**
+ * Updates an existing post's content
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.postId - ID of the post to update
+ * @param {Object} req.body - Request body containing update data
+ * @param {string} req.body.content - New content for the post
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with updated post data or error message
+ * @throws {Error} If post update fails
+ */
 exports.updatePost = async (req, res, next) => {
   const { postId } = req.params;
   const { content } = req.body;
@@ -187,7 +211,16 @@ exports.updatePost = async (req, res, next) => {
   }
 };
 
-
+/**
+ * Deletes a post by ID
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.postId - ID of the post to delete
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with success message or error
+ * @throws {Error} If post deletion fails
+ */
 exports.deletePost = async (req, res, next) => {
   const { postId } = req.params;
   const userId = req.user.id;
@@ -223,6 +256,20 @@ exports.deletePost = async (req, res, next) => {
   }
 };
 
+/**
+ * Retrieves posts with pagination and filtering options
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {number} [req.query.page=1] - Page number for pagination
+ * @param {number} [req.query.limit=10] - Number of posts per page
+ * @param {string} [req.query.groupId] - Filter posts by group ID
+ * @param {string} [req.query.channelId] - Filter posts by channel ID
+ * @param {string} [req.query.userId] - Filter posts by user ID
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with paginated posts data
+ * @throws {Error} If post retrieval fails
+ */
 exports.getPosts = async (req, res, next) => {
   try {
       const page = parseInt(req.query.page, 10) || 1;
@@ -270,7 +317,16 @@ exports.getPosts = async (req, res, next) => {
   }
 };
 
-
+/**
+ * Retrieves a single post by its ID
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.postId - ID of the post to retrieve
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with post data or error message
+ * @throws {Error} If post retrieval fails
+ */
 exports.getPostById = async (req, res, next) => {
   const { postId } = req.params;
 
@@ -299,7 +355,16 @@ exports.getPostById = async (req, res, next) => {
   }
 };
 
-
+/**
+ * Toggles like status for a post
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.postId - ID of the post to like/unlike
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with updated post data and like status
+ * @throws {Error} If like operation fails
+ */
 exports.likePost = async (req, res, next) => {
   const { postId } = req.params;
   const userId = req.user.id;
@@ -350,7 +415,16 @@ exports.likePost = async (req, res, next) => {
   }
 };
 
-//get post by channelId
+/**
+ * Retrieves all posts for a specific channel
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.channelId - ID of the channel to get posts from
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with channel posts data
+ * @throws {Error} If post retrieval fails
+ */
 exports.getPostsByChannelId = async (req, res, next) => {
     const { channelId } = req.params;
   
@@ -374,7 +448,17 @@ exports.getPostsByChannelId = async (req, res, next) => {
     }
   };
 
-//sending posts from all THE CHANNELS from modt like to least like not by channelId but from all channels with pagination
+/**
+ * Retrieves posts from all channels, sorted by likes count
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {number} [req.query.page=1] - Page number for pagination
+ * @param {number} [req.query.limit=10] - Number of posts per page
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with paginated posts data sorted by likes
+ * @throws {Error} If post retrieval fails
+ */
 exports.getPostsByAllChannels = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;

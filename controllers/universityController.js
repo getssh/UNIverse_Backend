@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Controller functions for managing university-related operations including CRUD operations,
+ * university admin management, and logo handling.
+ */
+
 const University = require('../models/University');
 const User = require('../models/User'); 
 const uploadToCloudinary = require('../utils/cloudinaryUploader');
@@ -5,6 +10,24 @@ const { getResourceTypeFromMime } = require('../utils/fileUtils');
 const cloudinary = require('../config/cloudinary');
 const mongoose = require('mongoose');
 
+/**
+ * Creates a new university with optional logo and admin assignments
+ * @param {Object} req - Express request object
+ * @param {Object} req.body - Request body containing university data
+ * @param {string} req.body.name - Name of the university (required)
+ * @param {string} [req.body.description] - Description of the university
+ * @param {string} [req.body.location] - Location of the university
+ * @param {string} [req.body.websiteUrl] - University's website URL
+ * @param {string} [req.body.contactEmail] - University's contact email
+ * @param {string} [req.body.contactPhone] - University's contact phone number
+ * @param {Array<string>} [req.body.universityAdmins] - Array of user IDs to be assigned as university admins
+ * @param {string} [req.body.status] - University status
+ * @param {Object} [req.file] - Logo file uploaded for the university
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with created university data or error message
+ * @throws {Error} If university creation fails or logo upload fails
+ */
 exports.createUniversity = async (req, res, next) => {
   const {
       name, description, location, websiteUrl, contactEmail, contactPhone,
@@ -84,6 +107,18 @@ exports.createUniversity = async (req, res, next) => {
 };
   
 
+/**
+ * Retrieves a paginated list of universities with optional search filtering
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters
+ * @param {number} [req.query.page=1] - Page number for pagination
+ * @param {number} [req.query.limit=20] - Number of universities per page
+ * @param {string} [req.query.search] - Search term to filter universities by name
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with paginated universities data
+ * @throws {Error} If university retrieval fails
+ */
 exports.getUniversities = async (req, res, next) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;
@@ -111,6 +146,16 @@ exports.getUniversities = async (req, res, next) => {
     });
 };
 
+/**
+ * Retrieves a single university by its ID
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.universityId - ID of the university to retrieve
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with university data or error message
+ * @throws {Error} If university retrieval fails
+ */
 exports.getUniversityById = async (req, res, next) => {
   const { universityId } = req.params;
   const university = await University.findById(universityId)
@@ -124,6 +169,26 @@ exports.getUniversityById = async (req, res, next) => {
   res.status(200).json({ success: true, data: university });
 };
 
+/**
+ * Updates an existing university's information
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.universityId - ID of the university to update
+ * @param {Object} req.body - Request body containing update data
+ * @param {string} [req.body.name] - Updated university name
+ * @param {string} [req.body.description] - Updated university description
+ * @param {string} [req.body.location] - Updated university location
+ * @param {string} [req.body.websiteUrl] - Updated university website URL
+ * @param {string} [req.body.contactEmail] - Updated university contact email
+ * @param {string} [req.body.contactPhone] - Updated university contact phone
+ * @param {string} [req.body.status] - Updated university status
+ * @param {Array<string>} [req.body.universityAdmins] - Updated list of university admin IDs
+ * @param {Object} [req.file] - New logo file for the university
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with updated university data or error message
+ * @throws {Error} If university update fails or logo upload fails
+ */
 exports.updateUniversity = async (req, res, next) => {
   const { universityId } = req.params;
   const requestBody = { ...req.body };
@@ -196,6 +261,16 @@ exports.updateUniversity = async (req, res, next) => {
 };
 
 
+/**
+ * Deletes a university by its ID
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.universityId - ID of the university to delete
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ * @returns {Object} JSON response with success message or error
+ * @throws {Error} If university deletion fails
+ */
 exports.deleteUniversity = async (req, res, next) => {
     const { universityId } = req.params;
 

@@ -5,6 +5,11 @@ const Group = require('../models/Group');
 const mongoose = require('mongoose');
 
 
+/**
+ * @route   POST api/chats/one-on-one
+ * @desc    Create a one-on-one chat
+ * @access  Private
+ */
 exports.getOrCreateOneOnOneChat = async (req, res, next) => {
     const { recipientId } = req.body;
     const senderId = req.user.id;
@@ -61,6 +66,11 @@ exports.getOrCreateOneOnOneChat = async (req, res, next) => {
 };
 
 
+/**
+ * @route   GET api/chats
+ * @desc    Get user chats
+ * @access  Private
+ */
 exports.getUserChats = async (req, res, next) => {
     const userId = req.user.id;
 
@@ -96,6 +106,11 @@ exports.getUserChats = async (req, res, next) => {
     }
 };
 
+/**
+ * @route   GET api/chats/:chatId
+ * @desc    Get a chat by ID
+ * @access  Private
+ */
 exports.getChatById = async (req, res, next) => {
     const { chatId } = req.params;
     const userId = req.user.id;

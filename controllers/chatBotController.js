@@ -1,5 +1,10 @@
 const chatWithDeepSeek = require('../utils/chatBotUtils');
 
+/**
+ * @route   POST api/chatbot
+ * @desc    Chat with the chatbot
+ * @access  Private
+ */
 const chatController = async (req, res) => {
   const { message } = req.body;
 

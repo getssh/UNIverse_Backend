@@ -16,6 +16,11 @@ const isEventOrganizerOrCreator = (event, userId) => {
 };
 
 
+/**
+ * @route   POST api/events
+ * @desc    Create a new event
+ * @access  Private
+ */
 exports.createEvent = async (req, res, next) => {
     const createdBy = req.user.id;
     const coverImageFile = req.file;
@@ -204,6 +209,11 @@ exports.createEvent = async (req, res, next) => {
 };
 
 
+/**
+ * @route   GET api/events
+ * @desc    Get events
+ * @access  Private
+ */
 exports.getEvents = async (req, res, next) => {
     const userId = req.user?.id;
     // Removed userUniversity from the filter logic
@@ -264,6 +274,11 @@ exports.getEvents = async (req, res, next) => {
 };
 
 
+/**
+ * @route   GET api/events/:eventId
+ * @desc    Get an event by ID
+ * @access  Private
+ */
 exports.getEventById = async (req, res, next) => {
     const { eventId } = req.params;
 
@@ -287,6 +302,11 @@ exports.getEventById = async (req, res, next) => {
 };
 
 
+/**
+ * @route   PUT api/events/:eventId
+ * @desc    Update an event
+ * @access  Private
+ */
 exports.updateEvent = async (req, res, next) => {
   const { eventId } = req.params;
   const requestBody = { ...req.body };
@@ -384,6 +404,11 @@ exports.updateEvent = async (req, res, next) => {
 };
 
 
+/**
+ * @route   DELETE api/events/:eventId
+ * @desc    Delete an event
+ * @access  Private
+ */
 exports.deleteEvent = async (req, res, next) => {
     const { eventId } = req.params;
     const userId = req.user.id;
@@ -403,6 +428,11 @@ exports.deleteEvent = async (req, res, next) => {
 };
 
 
+/**
+ * @route   POST api/events/:eventId/attend
+ * @desc    Attend an event
+ * @access  Private
+ */
 exports.toggleEventAttendance = async (req, res, next) => {
     const { eventId } = req.params;
     const userId = req.user.id;
@@ -470,6 +500,11 @@ exports.toggleEventAttendance = async (req, res, next) => {
 };
 
 
+/**
+ * @route   GET api/events/:eventId/attendees
+ * @desc    Get event attendees
+ * @access  Private
+ */
 exports.getEventAttendees = async (req, res, next) => {
     const { eventId } = req.params;
     const userId = req.user?.id;
