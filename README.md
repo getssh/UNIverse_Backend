@@ -173,19 +173,68 @@ To ensure a safe and supportive digital environment, the platform integrates AI-
 The backend of UNIverse Platform is built using Node.js and Express.js, following a modular structure inspired by the MVC (Model-View-Controller) pattern. Mongoose is used as an ODM (Object Data Modeling) library to interact with the MongoDB database.
 
 ## Project Structure <a name="project-structure"></a>
+
 ```
-/
-├── config/ # Configuration files for Database, Cloudinary, Passport (if used)
-├── controllers/ # Handles incoming requests, interacts with models, and sends responses
-├── middleware/ # Custom middleware (e.g., authentication, error handling, validation)
-├── models/ # Mongoose schemas and models defining the data structure
-├── routes/ # API route definitions, mapping URLs to controller functions
-├── utils/ # Utility/helper functions (e.g., email sending, file utilities)
-├── socket.js # Socket.IO server setup and event handling
-├── server.js # Main application entry point; sets up the Express app
-├── .env # Environment variables (not committed to version control)
-├── package.json # Project metadata and dependencies
-└── ...
+UNIverse_Backend/
+├── node_modules/
+├── config/                  
+│   ├── db.js 
+│   ├── cloudinary.js         
+├── controllers/
+│   ├── authController.js
+│   ├── userController.js
+│   ├── groupController.js
+│   ├── postController.js
+│   └── channelController.js
+│   ├── chatBotController.js
+│   ├── chatController.js
+│   ├── commentController.js
+│   ├── eventController.js
+│   └── messageController.js
+│   ├── reportController.js
+│   ├── universityController.js
+├── middleware/
+│   ├── authMiddleware.js
+│   ├── errorMiddleware.js
+├── models/
+│   ├── User.js
+│   ├── Group.js
+│   ├── Post.js
+│   ├── University.js
+│   └── Channel.js
+│   ├── Chat.js
+│   ├── Comment.js
+│   ├── Message.js
+│   ├── Report.js
+│   └── Event.js
+├── routes/
+│   ├── auth.js 
+│   ├── usersRoutes.js 
+│   ├── groupsRoutes.js 
+│   ├── posts.js 
+│   ├── chatBotRoutes.js
+│   ├── chatRoutes.js
+│   └── universityRoutes.js
+│   ├── channelRoutes.js
+│   ├── comments.js
+│   ├── eventRoutes.js
+│   ├── messageRoutes.js
+│   └── reportRoutes.js
+├── utils/
+│   ├── chatBotUtils.js 
+│   ├── cloudinaryUploader.js 
+│   ├── emailSender.js 
+│   ├── fileUtils.js
+│   ├── moderationService.js
+│   └── ocrUtils.js
+├── public/
+├── server.js
+├── socket.js
+├── .env 
+├── .gitignore
+├── package.json
+└── package-lock.json
+└── README.md
 ```
 
 
@@ -349,7 +398,7 @@ yarn install
 1. Ensure MongoDB is running (if local) or accessible (if cloud).
 2. Start the development server:
 
-```npm run dev```
+```npm run server```
 
 ### Run tests <a name="run-tests"></a>
 
