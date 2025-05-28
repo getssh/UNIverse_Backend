@@ -151,7 +151,7 @@ exports.registerUser = async (req, res, next) => {
 
         console.log(`User ${user.email} registered. Determined role: ${user.role}. ID Card verified: ${user.verified}`);
 
-        const verificationUrl = `${process.env.CLIENT_URL}/api/auth/verify-email/${verificationToken}`;
+        const verificationUrl = `https://universe-backend-kpry.onrender.com//api/auth/verify-email/${verificationToken}`;
         const emailMessage = `
           <h1>Welcome to the UNIverse Platform!</h1>
           <p>Thanks for signing up, ${user.name}.</p>
@@ -297,10 +297,10 @@ exports.verifyEmail = async (req, res, next) => {
 
         console.log(`Email verified successfully for user: ${user.email}`);
 
-        res.status(200).json({
-             success: true,
-             message: 'Email verified successfully! You can now log in.'
-         });
+        // res.status(200).json({
+        //      success: true,
+        //      message: 'Email verified successfully! You can now log in.'
+        //  });
 
         res.redirect(`${process.env.CLIENT_URL}/login`)
 
