@@ -57,38 +57,28 @@ const loginValidationRules = [
 ];
 
 
-// --- Authentication Routes ---
+/**
+ * @route   POST api/auth/register
+ * @desc    Register a new user
+ * @access  Public
+ */
+router.post('/register', upload.fields([
+    { name: 'profilePic', maxCount: 1 },
+    { name: 'idCard', maxCount: 1 }
+]), registrationValidationRules, handleValidationErrors, registerUser);
 
-// @route   POST api/auth/register
-// @desc    Register a new user
-// @access  Public
+/**
+ * @route   GET api/auth/verify-email/:token
+ * @desc    Verify user email
+ * @access  Public
+ */
+router.get('/verify-email/:token', verifyEmail);
 
-router.post(
-    '/register',
-    upload.fields([
-        { name: 'profilePic', maxCount: 1 },
-        { name: 'idCard', maxCount: 1 }
-    ]),
-    registrationValidationRules,
-    handleValidationErrors,
-    registerUser
-);
-
-// @route   GET api/auth/verify-email/:token
-// @desc    Verify user email
-// @access  Public
-
-router.get('/verify-email/:token', verifyEmail)
-
-// @route   POST api/auth/login
-// @desc    Login user
-// @access  Public
-
-router.post(
-  '/login',
-  loginValidationRules,
-  handleValidationErrors,   
-  loginUser
-);
+/**
+ * @route   POST api/auth/login
+ * @desc    Login user
+ * @access  Public
+ */
+router.post('/login', upload.none(), loginValidationRules, handleValidationErrors, loginUser);
 
 module.exports = router;
