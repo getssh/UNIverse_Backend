@@ -58,6 +58,11 @@ const resolveReportValidation = [
 ];
 
 
+/**
+ * @route   POST api/reports
+ * @desc    Create a new report
+ * @access  Private
+ */
 router.post(
     '/',
     protect, 
@@ -66,6 +71,11 @@ router.post(
     createReport 
 );
 
+/**
+ * @route   GET api/reports
+ * @desc    Get reports
+ * @access  Private
+ */
 router.get(
     '/',
     protect, 
@@ -75,6 +85,11 @@ router.get(
     getReports 
 );
 
+/**
+ * @route   PUT api/reports/:reportId/resolve
+ * @desc    Resolve a report
+ * @access  Private
+ */
 router.put(
     '/:reportId/resolve', 
     protect, 

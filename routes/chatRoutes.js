@@ -23,6 +23,11 @@ const getChatsQueryValidation = [
     query('limit').optional().isInt({ min: 1, max: 50 }).toInt()
 ];
 
+/**
+ * @route   POST api/chats/one-on-one
+ * @desc    Create a one-on-one chat
+ * @access  Private
+ */
 router.post(
     '/one-on-one',
     protect,
@@ -31,6 +36,11 @@ router.post(
     getOrCreateOneOnOneChat
 );
 
+/**
+ * @route   GET api/chats
+ * @desc    Get user chats
+ * @access  Private
+ */
 router.get(
     '/',
     protect,
@@ -39,6 +49,11 @@ router.get(
     getUserChats
 );
 
+/**
+ * @route   GET api/chats/:chatId
+ * @desc    Get a chat by ID
+ * @access  Private
+ */
 router.get(
     '/:chatId',
     protect,

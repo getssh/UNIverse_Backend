@@ -37,6 +37,11 @@ function determineRoleFromText(text) {
   return null;
 }
 
+/**
+ * @route   POST api/auth/register
+ * @desc    Register a new user, upload files, send verification email
+ * @access  Public
+ */
 exports.registerUser = async (req, res, next) => {
     const { name, email, password, role, university, department, faculty, studyLevel, gender, phoneNumber } = req.body;
 
@@ -195,6 +200,11 @@ exports.registerUser = async (req, res, next) => {
     }
 };
 
+/**
+ * @route   POST api/auth/login
+ * @desc    Login a user
+ * @access  Public
+ */
 exports.loginUser = async (req, res, next) => {
   const { email, password } = req.body;
 
@@ -262,6 +272,11 @@ exports.loginUser = async (req, res, next) => {
   }
 };
 
+/**
+ * @route   GET api/auth/verify-email/:token
+ * @desc    Verify a user's email
+ * @access  Public
+ */
 exports.verifyEmail = async (req, res, next) => {
     const { token } = req.params;
 

@@ -9,6 +9,11 @@ const { checkTextContent, checkImageContent } = require('../utils/moderationServ
 const { getIO } = require('../socket');
 
 
+/**
+ * @route   POST api/messages
+ * @desc    Send a message
+ * @access  Private
+ */
 exports.sendMessage = async (req, res, next) => {
      const { chatId, content, replyTo } = req.body; 
     const senderId = req.user.id;
@@ -122,6 +127,11 @@ exports.sendMessage = async (req, res, next) => {
 };
 
 
+/**
+ * @route   GET api/messages/:chatId
+ * @desc    Get messages for a chat
+ * @access  Private
+ */
 exports.getMessagesForChat = async (req, res, next) => {
     const { chatId } = req.params;
     const userId = req.user.id;
@@ -178,6 +188,11 @@ exports.getMessagesForChat = async (req, res, next) => {
 };
 
 
+/**
+ * @route   POST api/messages/:messageId
+ * @desc    Edit a message
+ * @access  Private
+ */
 exports.editMessage = async (req, res, next) => {
     const { messageId } = req.params;
     const { content } = req.body;
@@ -236,6 +251,11 @@ exports.editMessage = async (req, res, next) => {
 };
 
 
+/**
+ * @route   DELETE api/messages/:messageId
+ * @desc    Delete a message
+ * @access  Private
+ */
 exports.deleteMessage = async (req, res, next) => {
     const { messageId } = req.params;
     const userId = req.user.id;
@@ -293,6 +313,11 @@ exports.deleteMessage = async (req, res, next) => {
     }
 };
 
+/**
+ * @route   PUT api/messages/read/:chatId
+ * @desc    Mark messages as read
+ * @access  Private
+ */
 exports.markMessagesAsRead = async (req, res, next) => {
     const { chatId } = req.params;
     const userId = req.user.id;
@@ -349,6 +374,11 @@ exports.markMessagesAsRead = async (req, res, next) => {
 };
 
 //send only files that are not images pdf, docx, etc that posted on the given chat
+/**
+ * @route   GET api/messages/files/:chatId
+ * @desc    Get files for a chat
+ * @access  Private
+ */
 exports.getFilesForChat = async (req, res, next) => {
     const { chatId } = req.params;
     const userId = req.user.id;

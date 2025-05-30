@@ -3,6 +3,11 @@ const Post = require('../models/Post');
 const mongoose = require('mongoose');
 
 
+/**
+ * @route   POST api/posts/:postId/comments
+ * @desc    Create a comment
+ * @access  Private
+ */
 exports.createComment = async (req, res, next) => {
     const { postId } = req.params;
     const { content, parentCommentId } = req.body;
@@ -53,6 +58,11 @@ exports.createComment = async (req, res, next) => {
 };
 
 
+/**
+ * @route   GET api/posts/:postId/comments
+ * @desc    Get comments for a post
+ * @access  Private
+ */
 exports.getCommentsForPost = async (req, res, next) => {
     const { postId } = req.params;
 
@@ -98,6 +108,11 @@ exports.getCommentsForPost = async (req, res, next) => {
 };
 
 
+/**
+ * @route   PUT api/comments/:commentId
+ * @desc    Update a comment
+ * @access  Private
+ */
 exports.updateComment = async (req, res, next) => {
     const { commentId } = req.params;
     const { content } = req.body;
@@ -134,6 +149,11 @@ exports.updateComment = async (req, res, next) => {
     });
 };
 
+/**
+ * @route   DELETE api/comments/:commentId
+ * @desc    Delete a comment
+ * @access  Private
+ */
 exports.deleteComment = async (req, res, next) => {
     const { commentId } = req.params;
     const userId = req.user.id;
@@ -164,6 +184,11 @@ exports.deleteComment = async (req, res, next) => {
 };
 
 
+/**
+ * @route   PUT api/comments/:commentId/like
+ * @desc    Like a comment
+ * @access  Private
+ */
 exports.likeComment = async (req, res, next) => {
     const { commentId } = req.params;
     const userId = req.user.id;

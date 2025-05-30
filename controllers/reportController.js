@@ -17,6 +17,11 @@ const getModelForTargetType = (type) => {
     }
 };
 
+/**
+ * @route   POST api/reports
+ * @desc    Create a new report
+ * @access  Private
+ */
 const handleReportThresholds = async (targetType, targetId) => {
     console.log(`Checking report thresholds for ${targetType} ID: ${targetId}`);
     try {
@@ -142,6 +147,11 @@ exports.createReport = async (req, res, next) => {
     });
 };
 
+/**
+ * @route   GET api/reports
+ * @desc    Get reports
+ * @access  Private
+ */
 exports.getReports = async (req, res, next) => {
     const filter = {};
     if (req.query.resolved === 'true') filter.resolved = true;
@@ -202,6 +212,11 @@ exports.getReports = async (req, res, next) => {
     });
 };
 
+/**
+ * @route   PUT api/reports/:reportId/resolve
+ * @desc    Resolve a report
+ * @access  Private
+ */
 exports.resolveReport = async (req, res, next) => {
   const { reportId } = req.params;
   const { resolved = true, actionTaken, adminNotes } = req.body;

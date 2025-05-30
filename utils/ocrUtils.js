@@ -1,7 +1,11 @@
 const axios = require('axios');
 const qs = require('qs'); 
 
-
+/**
+ * Analyzes an ID card image with OCR.
+ * @param {string} imageUrl - The URL of the image to analyze.
+ * @returns {Promise<string>} The extracted text from the image.
+ */
 async function analyzeIdCardWithOCR(imageUrl) {
   try {
     console.log(`Sending image to OCR.Space: ${imageUrl}`);

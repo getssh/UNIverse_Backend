@@ -30,6 +30,11 @@ const updateCommentValidation = [
 ];
 
 
+/**
+ * @route   PUT api/comments/:commentId
+ * @desc    Update a comment
+ * @access  Private
+ */
 router.put(
     '/:commentId',
     protect,
@@ -40,6 +45,11 @@ router.put(
 );
 
 
+/**
+ * @route   DELETE api/comments/:commentId
+ * @desc    Delete a comment
+ * @access  Private
+ */
 router.delete(
     '/:commentId',
     protect,
@@ -48,6 +58,11 @@ router.delete(
     deleteComment
 );
 
+/**
+ * @route   PUT api/comments/:commentId/like
+ * @desc    Like a comment
+ * @access  Private
+ */
 router.put(
     '/:commentId/like',
     protect,

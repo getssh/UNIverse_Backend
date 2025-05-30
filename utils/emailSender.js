@@ -1,5 +1,14 @@
 const nodemailer = require('nodemailer');
 
+/**
+ * Sends an email using Nodemailer.
+ * @param {object} options - Email options.
+ * @param {string} options.to - Recipient's email address.
+ * @param {string} options.subject - Email subject line.
+ * @param {string} [options.text] - Plain text body of the email.
+ * @param {string} options.html - HTML body of the email.
+ */
+
 const sendEmail = async (options) => {
 
     const transporter = nodemailer.createTransport({

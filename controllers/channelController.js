@@ -9,6 +9,11 @@ const cloudinary = require('../config/cloudinary');
 const mongoose = require('mongoose');
 
 
+/**
+ * @route   POST api/channels
+ * @desc    Create a new channel
+ * @access  Private
+ */
 exports.createChannel = async (req, res, next) => {
     const { name, description, university, channelType, isPublic } = req.body;
     const profilePicFile = req.file;
@@ -97,6 +102,11 @@ exports.createChannel = async (req, res, next) => {
     });
 };
 
+/**
+ * @route   GET api/channels
+ * @desc    Get all channels
+ * @access  Private
+ */
 exports.getChannels = async (req, res, next) => {
     const userId = req.user.id;
     const userUniversityId = req.user.university;
@@ -172,6 +182,11 @@ exports.getChannels = async (req, res, next) => {
 };
 
 
+/**
+ * @route   GET api/channels/:channelId
+ * @desc    Get a channel by ID
+ * @access  Private
+ */
 exports.getChannelById = async (req, res, next) => {
     const { channelId } = req.params;
     const userId = req.user.id;
@@ -202,6 +217,11 @@ exports.getChannelById = async (req, res, next) => {
 };
 
 // sending all channels a given user is a member of
+/**
+ * @route   GET api/channels/user/:userId
+ * @desc    Get channels by user ID
+ * @access  Private
+ */
 exports.getUserChannels = async (req, res, next) => {
     const userId = req.user.id;
     const userUniversityId = req.user.university?.toString();
@@ -237,6 +257,11 @@ exports.getUserChannels = async (req, res, next) => {
 };
 
 //sending all channels a given user is not a member of
+/**
+ * @route   GET api/channels/non-member/:userId
+ * @desc    Get non-member channels by user ID
+ * @access  Private
+ */
 exports.getNonMemberChannels = async (req, res, next) => {
     const userId = req.user.id;
     const userUniversityId = req.user.university?.toString();
@@ -275,6 +300,11 @@ exports.getNonMemberChannels = async (req, res, next) => {
     });
 };
 
+/**
+ * @route   PUT api/channels/:channelId/update
+ * @desc    Update a channel
+ * @access  Private
+ */
 exports.updateChannel = async (req, res, next) => {
     const { channelId } = req.params;
     const { name, description, channelType, isPublic, admin } = req.body;
@@ -364,6 +394,11 @@ exports.updateChannel = async (req, res, next) => {
     });
 };
 
+/**
+ * @route   DELETE api/channels/:channelId/delete
+ * @desc    Delete a channel
+ * @access  Private
+ */
 exports.deleteChannel = async (req, res, next) => {
     const { channelId } = req.params;
     const userId = req.user.id;
@@ -380,6 +415,11 @@ exports.deleteChannel = async (req, res, next) => {
     res.status(200).json({ success: true, message: 'Channel deleted successfully.' });
 };
 
+/**
+ * @route   POST api/channels/:channelId/join
+ * @desc    Join a channel
+ * @access  Private
+ */
 exports.joinChannel = async (req, res, next) => {
     const { channelId } = req.params;
     const userId = req.user.id;
@@ -409,6 +449,11 @@ exports.joinChannel = async (req, res, next) => {
     res.status(200).json({ success: true, message: 'Successfully joined channel.' });
 };
 
+/**
+ * @route   POST api/channels/:channelId/leave
+ * @desc    Leave a channel
+ * @access  Private
+ */
 exports.leaveChannel = async (req, res, next) => {
     const { channelId } = req.params;
     const userId = req.user.id;
@@ -436,6 +481,11 @@ exports.leaveChannel = async (req, res, next) => {
     res.status(200).json({ success: true, message: 'Successfully left channel.' });
 };
 
+/**
+ * @route   GET api/channels/:channelId/members
+ * @desc    Get channel members
+ * @access  Private
+ */
 exports.getChannelMembers = async (req, res, next) => {
     const { channelId } = req.params;
     const userId = req.user.id;
@@ -478,6 +528,11 @@ exports.getChannelMembers = async (req, res, next) => {
 };
 
 // sending channels with search query
+/**
+ * @route   GET api/channels/search/:query
+ * @desc    Search channels
+ * @access  Private
+ */
 exports.searchChannels = async (req, res, next) => {
   try {
     const { query } = req.params;

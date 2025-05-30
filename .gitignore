@@ -41,4 +41,6 @@ yarn.lock
 # coverage
 # chromedriver.log
 
-# .DS_Store
+# .DS_StorecreateAdmin.js
+./createAdmin.js
+createAdmin.js

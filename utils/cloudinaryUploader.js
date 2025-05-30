@@ -3,6 +3,14 @@ const streamifier = require('streamifier')
 const path = require('path')
 const crypto = require('crypto')
 
+/**
+ * Uploads a file to Cloudinary.
+ * @param {Buffer} fileBuffer - The file buffer to upload.
+ * @param {string} originalFilename - The original filename of the file.
+ * @param {string} folder - The folder to upload the file to.
+ * @param {string} resourceType - The resource type of the file.
+ * @returns {Promise<object>} The result of the upload.
+ */
 const uploadToCloudinary = (fileBuffer, originalFilename, folder, resourceType = 'auto') => {
     return new Promise((resolve, reject) => {
         const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(8).toString('hex');
