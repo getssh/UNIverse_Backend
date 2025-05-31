@@ -1,0 +1,180 @@
+Event:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the event
+    title:
+      type: string
+      description: Title of the event
+    description:
+      type: string
+      description: Detailed description of the event
+    type:
+      type: string
+      enum: [workshop, seminar, conference, webinar, social, career_fair, other]
+      description: Type of the event
+    startDateTime:
+      type: string
+      format: date-time
+      description: Start date and time of the event
+    endDateTime:
+      type: string
+      format: date-time
+      description: End date and time of the event
+    location:
+      type: object
+      required:
+        - isOnline
+      properties:
+        isOnline:
+          type: boolean
+          description: Whether the event is online or physical
+        address:
+          type: string
+          description: Physical address for physical events
+        city:
+          type: string
+          description: City for physical events
+        stateOrProvince:
+          type: string
+          description: State or province for physical events
+        postalCode:
+          type: string
+          description: Postal code for physical events
+        country:
+          type: string
+          description: Country for physical events
+        meetingUrl:
+          type: string
+          format: uri
+          description: Online meeting link for online events
+        locationUrl:
+          type: string
+          format: uri
+          description: URL for physical location
+        additionalDetails:
+          type: string
+          description: Additional location details
+    university:
+      $ref: './University.yaml#/University'
+      description: University hosting the event
+    coverImage:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL of the event cover image
+        publicId:
+          type: string
+          description: Cloudinary public ID of the image
+    maxAttendees:
+      type: integer
+      minimum: 1
+      description: Maximum number of attendees allowed
+    registrationDeadline:
+      type: string
+      format: date-time
+      description: Deadline for event registration
+    registrationLink:
+      type: string
+      format: uri
+      description: Link for event registration
+    createdBy:
+      $ref: './User.yaml#/User'
+      description: User who created the event
+    organizers:
+      type: array
+      items:
+        $ref: './User.yaml#/User'
+      description: List of event organizers
+    attendees:
+      type: array
+      items:
+        $ref: './User.yaml#/User'
+      description: List of event attendees
+    associatedChat:
+      $ref: './Chat.yaml#/Chat'
+      description: Associated chat for the event
+    status:
+      type: string
+      enum: [upcoming, ongoing, past, cancelled, postponed]
+      description: Current status of the event
+    attendeeCount:
+      type: integer
+      minimum: 0
+      description: Current number of attendees
+    isRegistrationOpen:
+      type: boolean
+      description: Whether registration is still open
+    isFull:
+      type: boolean
+      description: Whether the event has reached maximum capacity
+    createdAt:
+      type: string
+      format: date-time
+      description: Date and time when the event was created
+    updatedAt:
+      type: string
+      format: date-time
+      description: Date and time when the event was last updated
+
+EventParticipant:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the participant
+    event:
+      $ref: '#/Event'
+      description: Event the user is participating in
+    user:
+      $ref: './User.yaml#/User'
+      description: User participating in the event
+    role:
+      type: string
+      enum: [organizer, participant, speaker, volunteer]
+      description: Role of the participant in the event
+    status:
+      type: string
+      enum: [registered, confirmed, cancelled]
+      description: Current status of the participant
+    registeredAt:
+      type: string
+      format: date-time
+      description: Date and time when the user registered
+    updatedAt:
+      type: string
+      format: date-time
+      description: Date and time when the participant status was last updated
+
+EventComment:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the comment
+    event:
+      $ref: '#/Event'
+      description: Event the comment belongs to
+    user:
+      $ref: './User.yaml#/User'
+      description: User who wrote the comment
+    content:
+      type: string
+      description: Content of the comment
+    isEdited:
+      type: boolean
+      description: Whether the comment has been edited
+    createdAt:
+      type: string
+      format: date-time
+      description: Date and time when the comment was created
+    updatedAt:
+      type: string
+      format: date-time
+      description: Date and time when the comment was last updated 

@@ -1,0 +1,160 @@
+Post:
+  type: object
+  required:
+    - content
+    - createdBy
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the post
+    content:
+      type: string
+      maxLength: 2000
+      description: Content of the post
+    files:
+      type: array
+      items:
+        type: object
+        properties:
+          url:
+            type: string
+            format: uri
+            description: URL of the file
+          publicId:
+            type: string
+            description: Cloudinary public ID of the file
+          resourceType:
+            type: string
+            enum: [image, video, raw]
+            description: Type of the file resource
+    createdBy:
+      type: string
+      format: uuid
+      description: Reference to the user who created the post
+    group:
+      type: string
+      format: uuid
+      description: Reference to the group where the post was created
+    channel:
+      type: string
+      format: uuid
+      description: Reference to the channel where the post was created
+    likes:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: List of user IDs who liked the post
+    reports:
+      type: array
+      items:
+        $ref: '#/Report'
+    isEdited:
+      type: boolean
+      default: false
+      description: Whether the post has been edited
+    createdAt:
+      type: string
+      format: date-time
+      description: When the post was created
+    updatedAt:
+      type: string
+      format: date-time
+      description: When the post was last updated
+
+Comment:
+  type: object
+  required:
+    - content
+    - author
+    - post
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the comment
+    content:
+      type: string
+      maxLength: 1000
+      description: Content of the comment
+    author:
+      type: string
+      format: uuid
+      description: Reference to the user who created the comment
+    post:
+      type: string
+      format: uuid
+      description: Reference to the post where the comment was created
+    likes:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: List of user IDs who liked the comment
+    reports:
+      type: array
+      items:
+        $ref: '#/Report'
+    isEdited:
+      type: boolean
+      default: false
+      description: Whether the comment has been edited
+    createdAt:
+      type: string
+      format: date-time
+      description: When the comment was created
+    updatedAt:
+      type: string
+      format: date-time
+      description: When the comment was last updated
+
+Report:
+  type: object
+  required:
+    - reason
+    - reporter
+    - reportedContent
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the report
+    reason:
+      type: string
+      enum: [spam, inappropriate, harassment, other]
+      description: Reason for the report
+    description:
+      type: string
+      description: Detailed description of the report
+    reporter:
+      type: string
+      format: uuid
+      description: Reference to the user who created the report
+    reportedContent:
+      type: object
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum: [post, comment]
+          description: Type of the reported content
+        id:
+          type: string
+          format: uuid
+          description: ID of the reported content
+    status:
+      type: string
+      enum: [pending, reviewed, resolved]
+      default: pending
+      description: Current status of the report
+    createdAt:
+      type: string
+      format: date-time
+      description: When the report was created
+    updatedAt:
+      type: string
+      format: date-time
+      description: When the report was last updated 

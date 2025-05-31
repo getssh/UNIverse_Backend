@@ -1,0 +1,605 @@
+/:
+  get:
+    tags:
+      - Chats
+    summary: Get user chats
+    description: Retrieve a list of all chats for the authenticated user
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+        description: Page number for pagination
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 15
+        description: Number of items per page
+    responses:
+      '200':
+        description: List of chats retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                count:
+                  type: integer
+                  description: Number of chats in current page
+                pagination:
+                  type: object
+                  properties:
+                    totalChats:
+                      type: integer
+                      description: Total number of chats
+                    totalPages:
+                      type: integer
+                      description: Total number of pages
+                    currentPage:
+                      type: integer
+                      description: Current page number
+                    limit:
+                      type: integer
+                      description: Number of items per page
+                data:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/Chat.yaml#/Chat'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '500':
+        $ref: '../components/responses/commonResponses.yaml#/ServerError'
+
+/one-on-one:
+  post:
+    tags:
+      - Chats
+    summary: Create or get one-on-one chat
+    description: Create a new one-on-one chat or retrieve existing one
+    security:
+      - BearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - recipientId
+            properties:
+              recipientId:
+                type: string
+                format: uuid
+                description: ID of the user to chat with
+    responses:
+      '200':
+        description: Existing chat retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../components/schemas/Chat.yaml#/Chat'
+                message:
+                  type: string
+                  example: Chat retrieved
+      '201':
+        description: New chat created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../components/schemas/Chat.yaml#/Chat'
+                message:
+                  type: string
+                  example: Chat created
+      '400':
+        description: Invalid request
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: false
+                error:
+                  type: string
+                  example: Recipient ID is required
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '404':
+        description: Recipient not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: false
+                error:
+                  type: string
+                  example: Recipient user not found
+
+/{chatId}:
+  get:
+    tags:
+      - Chats
+    summary: Get chat by ID
+    description: Retrieve a chat's details by its ID
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+    responses:
+      '200':
+        description: Chat details retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../components/schemas/Chat.yaml#/Chat'
+      '400':
+        description: Invalid chat ID
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: false
+                error:
+                  type: string
+                  example: Invalid Chat ID format
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        description: Not authorized to access chat
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: false
+                error:
+                  type: string
+                  example: Not authorized to access this chat
+      '404':
+        description: Chat not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: false
+                error:
+                  type: string
+                  example: Chat not found
+
+  put:
+    tags:
+      - Chats
+    summary: Update chat
+    description: Update a chat's details (for group chats only)
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+    responses:
+      '200':
+        description: Chat updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                chat:
+                  $ref: '../components/schemas/Chat.yaml#/Chat'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+  delete:
+    tags:
+      - Chats
+    summary: Delete chat
+    description: Delete a chat and all its messages
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+    responses:
+      '200':
+        description: Chat deleted successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/commonResponses.yaml#/Success'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+/{chatId}/messages:
+  get:
+    tags:
+      - Messages
+    summary: Get chat messages
+    description: Retrieve a list of messages in a chat
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+      - $ref: '../components/parameters/commonParameters.yaml#/page'
+      - $ref: '../components/parameters/commonParameters.yaml#/limit'
+    responses:
+      '200':
+        description: Messages retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                messages:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/Chat.yaml#/Message'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+  post:
+    tags:
+      - Messages
+    summary: Send message
+    description: Send a new message to a chat
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - content
+            properties:
+              content:
+                type: string
+              type:
+                type: string
+                enum: [text, image, file]
+                default: text
+              attachments:
+                type: array
+                items:
+                  type: string
+                  format: binary
+    responses:
+      '201':
+        description: Message sent successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                message:
+                  $ref: '../components/schemas/Chat.yaml#/Message'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+/{chatId}/messages/{messageId}:
+  put:
+    tags:
+      - Messages
+    summary: Update message
+    description: Update a message's content
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the message
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - content
+            properties:
+              content:
+                type: string
+    responses:
+      '200':
+        description: Message updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                message:
+                  $ref: '../components/schemas/Chat.yaml#/Message'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+  delete:
+    tags:
+      - Messages
+    summary: Delete message
+    description: Delete a message
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the message
+    responses:
+      '200':
+        description: Message deleted successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/commonResponses.yaml#/Success'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+/{chatId}/participants:
+  get:
+    tags:
+      - Chats
+    summary: Get chat participants
+    description: Retrieve a list of all participants in a chat
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+    responses:
+      '200':
+        description: Participants retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                participants:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/Chat.yaml#/ChatParticipant'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+  post:
+    tags:
+      - Chats
+    summary: Add participant
+    description: Add a new participant to a group chat
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - userId
+            properties:
+              userId:
+                type: string
+                format: uuid
+    responses:
+      '200':
+        description: Participant added successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                participant:
+                  $ref: '../components/schemas/Chat.yaml#/ChatParticipant'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+      '409':
+        $ref: '../components/responses/commonResponses.yaml#/ConflictError'
+
+/{chatId}/participants/{userId}:
+  delete:
+    tags:
+      - Chats
+    summary: Remove participant
+    description: Remove a participant from a group chat
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: chatId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the chat
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the user to remove
+    responses:
+      '200':
+        description: Participant removed successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/commonResponses.yaml#/Success'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError' 

@@ -1,0 +1,487 @@
+/channels:
+  get:
+    summary: Get all channels
+    description: Retrieve a list of all channels with optional filtering
+    security:
+      - BearerAuth: []
+    parameters:
+      - $ref: '../openapi.yaml#/components/parameters/page'
+      - $ref: '../openapi.yaml#/components/parameters/limit'
+      - $ref: '../openapi.yaml#/components/parameters/search'
+      - name: universityId
+        in: query
+        schema:
+          type: string
+          format: uuid
+        description: Filter by university ID
+      - name: channelType
+        in: query
+        schema:
+          type: string
+          enum: [general, official, departmental, course, club, announcement, other]
+        description: Filter by channel type
+      - name: member
+        in: query
+        schema:
+          type: string
+          enum: [true, false]
+        description: Filter by membership status
+      - name: rank
+        in: query
+        schema:
+          type: string
+          enum: [members]
+        description: Sort by member count
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum: [name, oldest, newest]
+        description: Sort field
+    responses:
+      '200':
+        description: List of channels retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/Channel.yaml#/Channel'
+                pagination:
+                  $ref: '../openapi.yaml#/components/schemas/Pagination'
+      '401':
+        $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+      '500':
+        $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  post:
+    summary: Create a new channel
+    description: Create a new channel with profile picture and details
+    security:
+      - BearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - name
+              - university
+              - channelType
+            properties:
+              name:
+                type: string
+                maxLength: 100
+                description: Name of the channel
+              description:
+                type: string
+                maxLength: 500
+                description: Detailed description of the channel
+              university:
+                type: string
+                format: uuid
+                description: ID of the university
+              channelType:
+                type: string
+                enum: [general, official, departmental, course, club, announcement, other]
+                description: Type of the channel
+              isPublic:
+                type: boolean
+                description: Whether the channel is public or private
+              profilePic:
+                type: string
+                format: binary
+                description: Profile picture for the channel
+    responses:
+      '201':
+        description: Channel created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../components/schemas/Channel.yaml#/Channel'
+      '400':
+        $ref: '../openapi.yaml#/components/responses/ValidationError'
+      '401':
+        $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+      '403':
+        $ref: '../openapi.yaml#/components/responses/ForbiddenError'
+      '500':
+        $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  /{channelId}:
+    parameters:
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the channel
+    get:
+      summary: Get channel details
+      description: Retrieve details of a specific channel
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Channel details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '../components/schemas/Channel.yaml#/Channel'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+        '500':
+          $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  /{channelId}/update:
+    parameters:
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the channel
+    put:
+      summary: Update channel details
+      description: Update details of a specific channel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  description: Name of the channel
+                description:
+                  type: string
+                  maxLength: 500
+                  description: Detailed description of the channel
+                channelType:
+                  type: string
+                  enum: [general, official, departmental, course, club, announcement, other]
+                  description: Type of the channel
+                isPublic:
+                  type: boolean
+                  description: Whether the channel is public or private
+                profilePic:
+                  type: string
+                  format: binary
+                  description: Profile picture for the channel
+      responses:
+        '200':
+          description: Channel updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '../components/schemas/Channel.yaml#/Channel'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '../openapi.yaml#/components/responses/ForbiddenError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+        '500':
+          $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  /{channelId}/delete:
+    parameters:
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the channel
+    delete:
+      summary: Delete channel
+      description: Delete a channel and all its associated data
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Channel deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Channel deleted successfully
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '../openapi.yaml#/components/responses/ForbiddenError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+        '500':
+          $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  /{channelId}/join:
+    parameters:
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the channel
+    post:
+      summary: Join channel
+      description: Join a channel as a member
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successfully joined the channel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Successfully joined the channel
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+        '409':
+          $ref: '../openapi.yaml#/components/responses/ConflictError'
+        '500':
+          $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  /{channelId}/leave:
+    parameters:
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the channel
+    post:
+      summary: Leave channel
+      description: Leave a channel
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successfully left the channel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Successfully left the channel
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+        '500':
+          $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  /{channelId}/members:
+    parameters:
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the channel
+    get:
+      summary: Get channel members
+      description: Get list of members for a channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '../openapi.yaml#/components/parameters/page'
+        - $ref: '../openapi.yaml#/components/parameters/limit'
+      responses:
+        '200':
+          description: List of members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '../components/schemas/User.yaml#/User'
+                  pagination:
+                    $ref: '../openapi.yaml#/components/schemas/Pagination'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+        '500':
+          $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  /user/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the user
+    get:
+      summary: Get user's channels
+      description: Get list of channels a user is a member of
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of channels retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '../components/schemas/Channel.yaml#/Channel'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+        '500':
+          $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  /non-member/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the user
+    get:
+      summary: Get non-member channels
+      description: Get list of channels a user is not a member of
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of channels retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '../components/schemas/Channel.yaml#/Channel'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../openapi.yaml#/components/responses/NotFoundError'
+        '500':
+          $ref: '../openapi.yaml#/components/responses/ServerError'
+
+  /search/{query}:
+    parameters:
+      - name: query
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 2
+        description: Search query
+    get:
+      summary: Search channels
+      description: Search for channels by name or description
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '../openapi.yaml#/components/parameters/page'
+        - $ref: '../openapi.yaml#/components/parameters/limit'
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '../components/schemas/Channel.yaml#/Channel'
+                  pagination:
+                    $ref: '../openapi.yaml#/components/schemas/Pagination'
+        '400':
+          $ref: '../openapi.yaml#/components/responses/ValidationError'
+        '401':
+          $ref: '../openapi.yaml#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '../openapi.yaml#/components/responses/ServerError' 

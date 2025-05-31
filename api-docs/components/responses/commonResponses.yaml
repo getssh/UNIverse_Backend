@@ -1,0 +1,61 @@
+Error:
+  type: object
+  properties:
+    success:
+      type: boolean
+      example: false
+    error:
+      type: string
+      description: Error message
+
+Success:
+  type: object
+  properties:
+    success:
+      type: boolean
+      example: true
+    message:
+      type: string
+      description: Success message
+
+UnauthorizedError:
+  description: Unauthorized - Authentication is required
+  content:
+    application/json:
+      schema:
+        $ref: '#/Error'
+
+ForbiddenError:
+  description: Forbidden - User doesn't have permission
+  content:
+    application/json:
+      schema:
+        $ref: '#/Error'
+
+NotFoundError:
+  description: Not Found - Resource doesn't exist
+  content:
+    application/json:
+      schema:
+        $ref: '#/Error'
+
+ValidationError:
+  description: Bad Request - Invalid input
+  content:
+    application/json:
+      schema:
+        $ref: '#/Error'
+
+ConflictError:
+  description: Conflict - Resource already exists
+  content:
+    application/json:
+      schema:
+        $ref: '#/Error'
+
+ServerError:
+  description: Internal Server Error
+  content:
+    application/json:
+      schema:
+        $ref: '#/Error' 

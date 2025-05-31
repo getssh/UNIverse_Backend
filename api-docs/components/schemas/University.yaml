@@ -1,0 +1,117 @@
+University:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the university
+    name:
+      type: string
+      maxLength: 150
+      description: Name of the university
+      required: true
+    description:
+      type: string
+      maxLength: 1000
+      description: Detailed description of the university
+    location:
+      type: string
+      maxLength: 200
+      description: Location of the university
+    websiteUrl:
+      type: string
+      format: uri
+      pattern: '^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$'
+      description: Official website URL of the university
+    logo:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL of the university logo
+          default: 'https://res.cloudinary.com/dvtc6coe2/image/upload/v1747590439/channel_pro_placeholder_wduo6q.png'
+        publicId:
+          type: string
+          description: Cloudinary public ID of the logo
+          nullable: true
+    contactEmail:
+      type: string
+      format: email
+      pattern: '^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$'
+      description: Official contact email of the university
+    contactPhone:
+      type: string
+      description: Official contact phone number
+    universityAdmins:
+      type: array
+      items:
+        $ref: './User.yaml#/User'
+      description: List of university administrators
+    status:
+      type: string
+      enum: [pending_approval, active, suspended, inactive]
+      default: active
+      description: Current status of the university
+    adminCount:
+      type: integer
+      minimum: 0
+      description: Number of university administrators
+    createdAt:
+      type: string
+      format: date-time
+      description: When the university was added to the platform
+    updatedAt:
+      type: string
+      format: date-time
+      description: When the university was last updated
+
+Faculty:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the faculty
+    name:
+      type: string
+      description: Name of the faculty
+    description:
+      type: string
+      description: Detailed description of the faculty
+    departments:
+      type: array
+      items:
+        $ref: '#/Department'
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+
+Department:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier for the department
+    name:
+      type: string
+      description: Name of the department
+    description:
+      type: string
+      description: Detailed description of the department
+    studyLevels:
+      type: array
+      items:
+        type: string
+        enum: [undergraduate, graduate, PhD]
+      description: Available study levels in the department
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time 

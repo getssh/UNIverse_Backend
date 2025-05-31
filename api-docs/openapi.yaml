@@ -1,0 +1,67 @@
+openapi: 3.0.0
+info:
+  title: UNIverse API
+  version: 1.0.0
+  description: API for connecting students and teachers
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.universe.com/v1
+    description: Production server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      $ref: './components/schemas/User.yaml#/User'
+    University:
+      $ref: './components/schemas/University.yaml#/University'
+    Channel:
+      $ref: './components/schemas/Channel.yaml#/Channel'
+    Post:
+      $ref: './components/schemas/Post.yaml#/Post'
+    Group:
+      $ref: './components/schemas/Group.yaml#/Group'
+    Chat:
+      $ref: './components/schemas/Chat.yaml#/Chat'
+    Message:
+      $ref: './components/schemas/Message.yaml#/Message'
+    Event:
+      $ref: './components/schemas/Event.yaml#/Event'
+    EventParticipant:
+      $ref: './components/schemas/Event.yaml#/EventParticipant'
+    EventComment:
+      $ref: './components/schemas/Event.yaml#/EventComment'
+    Pagination:
+      $ref: './components/schemas/Pagination.yaml#/Pagination'
+
+  parameters:
+    $ref: './components/parameters/commonParameters.yaml'
+
+  responses:
+    $ref: './components/responses/commonResponses.yaml'
+
+paths:
+  /auth:
+    $ref: './paths/auth.yaml'
+  /users:
+    $ref: './paths/users.yaml'
+  /universities:
+    $ref: './paths/universities.yaml'
+  /channels:
+    $ref: './paths/channels.yaml'
+  /posts:
+    $ref: './paths/posts.yaml'
+  /groups:
+    $ref: './paths/groups.yaml'
+  /chats:
+    $ref: './paths/chats.yaml'
+  /messages:
+    $ref: './paths/messages.yaml'
+  /events:
+    $ref: './paths/events.yaml'

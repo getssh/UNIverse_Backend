@@ -1,0 +1,483 @@
+/:
+  get:
+    tags:
+      - Posts
+    summary: Get all posts
+    description: Retrieve a list of all posts with optional filtering
+    parameters:
+      - name: groupId
+        in: query
+        schema:
+          type: string
+          format: uuid
+        description: Filter posts by group ID
+      - name: channelId
+        in: query
+        schema:
+          type: string
+          format: uuid
+        description: Filter posts by channel ID
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+        description: Page number for pagination
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 10
+        description: Number of items per page
+    responses:
+      '200':
+        description: List of posts retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/Post.yaml#/Post'
+      '500':
+        $ref: '../components/responses/commonResponses.yaml#/ServerError'
+
+  post:
+    tags:
+      - Posts
+    summary: Create a new post
+    description: Create a new post in a group or channel
+    security:
+      - BearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - content
+            properties:
+              content:
+                type: string
+                maxLength: 2000
+              groupId:
+                type: string
+                format: uuid
+              channelId:
+                type: string
+                format: uuid
+              files:
+                type: array
+                items:
+                  type: string
+                  format: binary
+    responses:
+      '201':
+        description: Post created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../components/schemas/Post.yaml#/Post'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+/{postId}:
+  get:
+    tags:
+      - Posts
+    summary: Get post by ID
+    description: Retrieve a post's details by its ID
+    parameters:
+      - name: postId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the post to retrieve
+    responses:
+      '200':
+        description: Post details retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../components/schemas/Post.yaml#/Post'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+  put:
+    tags:
+      - Posts
+    summary: Update post
+    description: Update a post's content
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: postId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the post to update
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - content
+            properties:
+              content:
+                type: string
+                maxLength: 2000
+    responses:
+      '200':
+        description: Post updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../components/schemas/Post.yaml#/Post'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+  delete:
+    tags:
+      - Posts
+    summary: Delete post
+    description: Delete a post and all its associated data
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: postId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the post to delete
+    responses:
+      '200':
+        description: Post deleted successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                message:
+                  type: string
+                  example: Post deleted successfully
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+/{postId}/like:
+  post:
+    tags:
+      - Posts
+    summary: Like/Unlike post
+    description: Toggle like status for a post
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: postId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the post to like/unlike
+    responses:
+      '200':
+        description: Like status toggled successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../components/schemas/Post.yaml#/Post'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+/{postId}/report:
+  post:
+    tags:
+      - Posts
+    summary: Report post
+    description: Report a post for inappropriate content
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: postId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID of the post to report
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - reason
+            properties:
+              reason:
+                type: string
+                enum: [spam, inappropriate, harassment, other]
+              description:
+                type: string
+    responses:
+      '201':
+        description: Post reported successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: '../components/schemas/Post.yaml#/Report'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+/{postId}/comments:
+  get:
+    tags:
+      - Comments
+    summary: Get post comments
+    description: Retrieve a list of all comments on a post
+    parameters:
+      - $ref: '../components/parameters/commonParameters.yaml#/postId'
+      - $ref: '../components/parameters/commonParameters.yaml#/page'
+      - $ref: '../components/parameters/commonParameters.yaml#/limit'
+    responses:
+      '200':
+        description: Comments retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                comments:
+                  type: array
+                  items:
+                    $ref: '../components/schemas/Post.yaml#/Comment'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+  post:
+    tags:
+      - Comments
+    summary: Add comment to post
+    description: Add a new comment to a post
+    security:
+      - BearerAuth: []
+    parameters:
+      - $ref: '../components/parameters/commonParameters.yaml#/postId'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - content
+            properties:
+              content:
+                type: string
+    responses:
+      '201':
+        description: Comment added successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                comment:
+                  $ref: '../components/schemas/Post.yaml#/Comment'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+/{postId}/comments/{commentId}:
+  put:
+    tags:
+      - Comments
+    summary: Update comment
+    description: Update a comment's content
+    security:
+      - BearerAuth: []
+    parameters:
+      - $ref: '../components/parameters/commonParameters.yaml#/postId'
+      - $ref: '../components/parameters/commonParameters.yaml#/commentId'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - content
+            properties:
+              content:
+                type: string
+    responses:
+      '200':
+        description: Comment updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                comment:
+                  $ref: '../components/schemas/Post.yaml#/Comment'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+  delete:
+    tags:
+      - Comments
+    summary: Delete comment
+    description: Delete a comment
+    security:
+      - BearerAuth: []
+    parameters:
+      - $ref: '../components/parameters/commonParameters.yaml#/postId'
+      - $ref: '../components/parameters/commonParameters.yaml#/commentId'
+    responses:
+      '200':
+        description: Comment deleted successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses/commonResponses.yaml#/Success'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '403':
+        $ref: '../components/responses/commonResponses.yaml#/ForbiddenError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError'
+
+/{postId}/comments/{commentId}/report:
+  post:
+    tags:
+      - Reports
+    summary: Report comment
+    description: Report a comment for inappropriate content
+    security:
+      - BearerAuth: []
+    parameters:
+      - $ref: '../components/parameters/commonParameters.yaml#/postId'
+      - $ref: '../components/parameters/commonParameters.yaml#/commentId'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - reason
+            properties:
+              reason:
+                type: string
+                enum: [spam, inappropriate, harassment, other]
+              description:
+                type: string
+    responses:
+      '201':
+        description: Comment reported successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                report:
+                  $ref: '../components/schemas/Post.yaml#/Report'
+      '400':
+        $ref: '../components/responses/commonResponses.yaml#/ValidationError'
+      '401':
+        $ref: '../components/responses/commonResponses.yaml#/UnauthorizedError'
+      '404':
+        $ref: '../components/responses/commonResponses.yaml#/NotFoundError' 
