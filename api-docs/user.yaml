@@ -1,0 +1,455 @@
+openapi: 3.0.0
+info:
+  title: UNIverse Backend API
+  description: |
+    Backend API for the UNIverse platform - A university social platform connecting students and teachers.
+    This API provides endpoints for user authentication, profile management, university operations, and more.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: support@universe.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user
+        name:
+          type: string
+          description: User's full name
+        email:
+          type: string
+          format: email
+          description: User's email address
+        role:
+          type: string
+          enum: [student, teacher, admin]
+          description: User's role in the platform
+        university:
+          type: string
+          format: uuid
+          description: Reference to the user's university
+        department:
+          type: string
+          description: User's department
+        faculty:
+          type: string
+          description: User's faculty
+        studyLevel:
+          type: string
+          enum: [undergraduate, graduate, PhD]
+          description: User's study level
+        gender:
+          type: string
+          enum: [male, female, other]
+          description: User's gender
+        phoneNumber:
+          type: string
+          description: User's phone number
+        profilePicUrl:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the profile picture
+            publicId:
+              type: string
+              description: Cloudinary public ID of the profile picture
+        accountStatus:
+          type: string
+          enum: [active, waitVerification, inactive, banned, warned]
+          description: Current status of the user's account
+        isEmailVerified:
+          type: boolean
+          description: Whether the user's email has been verified
+        dateJoined:
+          type: string
+          format: date-time
+          description: When the user joined the platform
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Register a new user with profile picture and ID card
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+                - idCard
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                role:
+                  type: string
+                  enum: [student, teacher]
+                university:
+                  type: string
+                department:
+                  type: string
+                faculty:
+                  type: string
+                studyLevel:
+                  type: string
+                  enum: [undergraduate, graduate, PhD]
+                gender:
+                  type: string
+                  enum: [male, female, other]
+                phoneNumber:
+                  type: string
+                profilePic:
+                  type: string
+                  format: binary
+                idCard:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Registration successful! Please check your email to verify your account.
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user and return JWT token
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{userId}:
+    get:
+      tags:
+        - Users
+      summary: Get user details
+      description: Retrieve user details by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Users
+      summary: Update user details
+      description: Update user profile information and/or profile picture
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                department:
+                  type: string
+                faculty:
+                  type: string
+                studyLevel:
+                  type: string
+                  enum: [undergraduate, graduate, PhD]
+                gender:
+                  type: string
+                  enum: [male, female, other]
+                phoneNumber:
+                  type: string
+                profilePic:
+                  type: string
+                  format: binary
+                removeProfilePic:
+                  type: string
+                  enum: [true, false]
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '403':
+          description: Not authorized to update this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Users
+      summary: Delete user account
+      description: Delete a user account
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '403':
+          description: Not authorized to delete this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/forgot-password:
+    post:
+      tags:
+        - Users
+      summary: Request password reset
+      description: Send password reset email to user
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Password reset email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/reset-password:
+    post:
+      tags:
+        - Users
+      summary: Reset password
+      description: Reset user password using reset token
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify-email/{token}:
+    get:
+      tags:
+        - Authentication
+      summary: Verify email
+      description: Verify user's email address using verification token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

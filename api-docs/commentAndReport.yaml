@@ -1,0 +1,631 @@
+openapi: 3.0.0
+info:
+  title: UNIverse Comment and Report API
+  description: |
+    Comment and report management API for the UNIverse platform.
+    This API provides endpoints for managing comments on posts and handling user reports.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: support@universe.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the comment
+        post:
+          type: string
+          format: uuid
+          description: Reference to the post
+        author:
+          type: string
+          format: uuid
+          description: Reference to the user who wrote the comment
+        content:
+          type: string
+          description: Content of the comment
+        likes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs who liked the comment
+        likesCount:
+          type: integer
+          description: Number of likes on the comment
+        createdAt:
+          type: string
+          format: date-time
+          description: When the comment was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the comment was last updated
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the report
+        type:
+          type: string
+          enum: [post, comment, user, channel, group]
+          description: Type of content being reported
+        contentId:
+          type: string
+          format: uuid
+          description: Reference to the reported content
+        reporter:
+          type: string
+          format: uuid
+          description: Reference to the user who made the report
+        reason:
+          type: string
+          enum: [spam, harassment, inappropriate_content, hate_speech, other]
+          description: Reason for the report
+        description:
+          type: string
+          description: Additional details about the report
+        status:
+          type: string
+          enum: [pending, under_review, resolved, dismissed]
+          description: Current status of the report
+        resolvedBy:
+          type: string
+          format: uuid
+          description: Reference to the admin who resolved the report
+        resolution:
+          type: string
+          description: Resolution details or notes
+        createdAt:
+          type: string
+          format: date-time
+          description: When the report was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the report was last updated
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /posts/{postId}/comments:
+    get:
+      tags:
+        - Comments
+      summary: Get post comments
+      description: Retrieve all comments for a specific post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of comments per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Comments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Comments
+      summary: Add comment
+      description: Add a new comment to a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Comment added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  comment:
+                    $ref: '#/components/schemas/Comment'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/{postId}/comments/{commentId}:
+    put:
+      tags:
+        - Comments
+      summary: Update comment
+      description: Update a comment (Author only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Comment updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  comment:
+                    $ref: '#/components/schemas/Comment'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to update this comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post or comment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Comments
+      summary: Delete comment
+      description: Delete a comment (Author or Post Owner only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comment deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to delete this comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post or comment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/{postId}/comments/{commentId}/like:
+    post:
+      tags:
+        - Comments
+      summary: Toggle like on comment
+      description: Like or unlike a comment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Like status toggled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  comment:
+                    $ref: '#/components/schemas/Comment'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post or comment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reports:
+    get:
+      tags:
+        - Reports
+      summary: Get all reports
+      description: Retrieve a list of all reports (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          description: Filter reports by type
+          schema:
+            type: string
+            enum: [post, comment, user, channel, group]
+        - name: status
+          in: query
+          description: Filter reports by status
+          schema:
+            type: string
+            enum: [pending, under_review, resolved, dismissed]
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of reports per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of reports retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Report'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Reports
+      summary: Create report
+      description: Create a new report for content
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - contentId
+                - reason
+              properties:
+                type:
+                  type: string
+                  enum: [post, comment, user, channel, group]
+                contentId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  enum: [spam, harassment, inappropriate_content, hate_speech, other]
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Report created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  report:
+                    $ref: '#/components/schemas/Report'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reports/{reportId}:
+    get:
+      tags:
+        - Reports
+      summary: Get report details
+      description: Retrieve detailed information about a specific report (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  report:
+                    $ref: '#/components/schemas/Report'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Reports
+      summary: Update report status
+      description: Update the status of a report (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [under_review, resolved, dismissed]
+                resolution:
+                  type: string
+      responses:
+        '200':
+          description: Report status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  report:
+                    $ref: '#/components/schemas/Report'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

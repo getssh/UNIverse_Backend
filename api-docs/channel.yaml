@@ -1,0 +1,829 @@
+openapi: 3.0.0
+info:
+  title: UNIverse Channel API
+  description: |
+    Channel management API for the UNIverse platform.
+    This API provides endpoints for managing channels, posts, comments, and related operations.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: support@universe.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Channel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the channel
+        name:
+          type: string
+          description: Name of the channel
+        description:
+          type: string
+          description: Detailed description of the channel
+        type:
+          type: string
+          enum: [university, faculty, department, course]
+          description: Type of the channel
+        university:
+          type: string
+          format: uuid
+          description: Reference to the university (for all channel types)
+        faculty:
+          type: string
+          format: uuid
+          description: Reference to the faculty (for faculty, department, and course channels)
+        department:
+          type: string
+          format: uuid
+          description: Reference to the department (for department and course channels)
+        course:
+          type: string
+          format: uuid
+          description: Reference to the course (for course channels only)
+        coverImage:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the channel cover image
+            publicId:
+              type: string
+              description: Cloudinary public ID of the cover image
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChannelMember'
+        moderators:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs who are moderators
+        createdAt:
+          type: string
+          format: date-time
+          description: When the channel was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the channel was last updated
+
+    ChannelMember:
+      type: object
+      properties:
+        user:
+          type: string
+          format: uuid
+          description: Reference to the user
+        role:
+          type: string
+          enum: [member, moderator, admin]
+          description: Role of the user in the channel
+        joinedAt:
+          type: string
+          format: date-time
+          description: When the user joined the channel
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the post
+        channel:
+          type: string
+          format: uuid
+          description: Reference to the channel
+        author:
+          type: string
+          format: uuid
+          description: Reference to the user who created the post
+        content:
+          type: string
+          description: Content of the post
+        media:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [image, video, file]
+                description: Type of media
+              url:
+                type: string
+                format: uri
+                description: URL of the media
+              publicId:
+                type: string
+                description: Cloudinary public ID
+        likes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs who liked the post
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the comment
+        post:
+          type: string
+          format: uuid
+          description: Reference to the post
+        author:
+          type: string
+          format: uuid
+          description: Reference to the user who created the comment
+        content:
+          type: string
+          description: Content of the comment
+        likes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs who liked the comment
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /channels:
+    get:
+      tags:
+        - Channels
+      summary: Get all channels
+      description: Retrieve a list of all channels with optional filtering
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          description: Filter channels by type
+          schema:
+            type: string
+            enum: [university, faculty, department, course]
+        - name: university
+          in: query
+          description: Filter channels by university ID
+          schema:
+            type: string
+        - name: faculty
+          in: query
+          description: Filter channels by faculty ID
+          schema:
+            type: string
+        - name: department
+          in: query
+          description: Filter channels by department ID
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Search channels by name or description
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of channels retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  channels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Channel'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Channels
+      summary: Create a new channel
+      description: Create a new channel (Admin/Moderator only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+                - type
+                - university
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [university, faculty, department, course]
+                university:
+                  type: string
+                faculty:
+                  type: string
+                department:
+                  type: string
+                course:
+                  type: string
+                coverImage:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Channel created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  channel:
+                    $ref: '#/components/schemas/Channel'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}:
+    get:
+      tags:
+        - Channels
+      summary: Get channel details
+      description: Retrieve detailed information about a specific channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Channel details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  channel:
+                    $ref: '#/components/schemas/Channel'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Channels
+      summary: Update channel details
+      description: Update channel information (Admin/Moderator only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                coverImage:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Channel updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  channel:
+                    $ref: '#/components/schemas/Channel'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Channels
+      summary: Delete channel
+      description: Delete a channel (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Channel deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}/members:
+    get:
+      tags:
+        - Channel Members
+      summary: Get channel members
+      description: Retrieve all members of a specific channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Channel members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  members:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChannelMember'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Channel Members
+      summary: Add member to channel
+      description: Add a new member to the channel (Admin/Moderator only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - role
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                role:
+                  type: string
+                  enum: [member, moderator]
+      responses:
+        '201':
+          description: Member added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  member:
+                    $ref: '#/components/schemas/ChannelMember'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}/posts:
+    get:
+      tags:
+        - Posts
+      summary: Get channel posts
+      description: Retrieve all posts in a specific channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of posts per page
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Posts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Post'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Posts
+      summary: Create a new post
+      description: Create a new post in the channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                media:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  post:
+                    $ref: '#/components/schemas/Post'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to post in this channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}/posts/{postId}/comments:
+    get:
+      tags:
+        - Comments
+      summary: Get post comments
+      description: Retrieve all comments for a specific post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of comments per page
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Comments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel or post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Comments
+      summary: Add comment to post
+      description: Add a new comment to a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Comment added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  comment:
+                    $ref: '#/components/schemas/Comment'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to comment in this channel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel or post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

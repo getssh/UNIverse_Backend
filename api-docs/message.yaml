@@ -1,0 +1,626 @@
+openapi: 3.0.0
+info:
+  title: UNIverse Message API
+  description: |
+    Message management API for the UNIverse platform.
+    This API provides endpoints for managing messages, notifications, and real-time updates.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: support@universe.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the message
+        type:
+          type: string
+          enum: [text, image, file, notification]
+          description: Type of message content
+        sender:
+          type: string
+          format: uuid
+          description: Reference to the user who sent the message
+        recipient:
+          type: string
+          format: uuid
+          description: Reference to the user who should receive the message
+        content:
+          type: string
+          description: Content of the message
+        media:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the media
+            publicId:
+              type: string
+              description: Cloudinary public ID
+        read:
+          type: boolean
+          description: Whether the message has been read
+        readAt:
+          type: string
+          format: date-time
+          description: When the message was read
+        createdAt:
+          type: string
+          format: date-time
+          description: When the message was sent
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the message was last updated
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the notification
+        type:
+          type: string
+          enum: [message, friend_request, group_invite, post_comment, post_like]
+          description: Type of notification
+        recipient:
+          type: string
+          format: uuid
+          description: Reference to the user who should receive the notification
+        sender:
+          type: string
+          format: uuid
+          description: Reference to the user who triggered the notification
+        content:
+          type: string
+          description: Content of the notification
+        read:
+          type: boolean
+          description: Whether the notification has been read
+        readAt:
+          type: string
+          format: date-time
+          description: When the notification was read
+        createdAt:
+          type: string
+          format: date-time
+          description: When the notification was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the notification was last updated
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /messages:
+    get:
+      tags:
+        - Messages
+      summary: Get all messages
+      description: Retrieve a list of all messages for the authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          description: Filter messages by type
+          schema:
+            type: string
+            enum: [text, image, file, notification]
+        - name: read
+          in: query
+          description: Filter messages by read status
+          schema:
+            type: boolean
+        - name: before
+          in: query
+          description: Get messages before this timestamp
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of messages per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Messages
+      summary: Send message
+      description: Send a new message to a user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - recipient
+                - content
+              properties:
+                recipient:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+                type:
+                  type: string
+                  enum: [text, image, file]
+                media:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /messages/{messageId}:
+    get:
+      tags:
+        - Messages
+      summary: Get message details
+      description: Retrieve detailed information about a specific message
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    $ref: '#/components/schemas/Message'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Messages
+      summary: Update message
+      description: Update a message (Sender only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Message updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    $ref: '#/components/schemas/Message'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to update this message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Messages
+      summary: Delete message
+      description: Delete a message (Sender only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to delete this message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /messages/{messageId}/read:
+    put:
+      tags:
+        - Messages
+      summary: Mark message as read
+      description: Mark a message as read by the recipient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message marked as read successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    $ref: '#/components/schemas/Message'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to mark this message as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Message not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Get all notifications
+      description: Retrieve a list of all notifications for the authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          description: Filter notifications by type
+          schema:
+            type: string
+            enum: [message, friend_request, group_invite, post_comment, post_like]
+        - name: read
+          in: query
+          description: Filter notifications by read status
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of notifications per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  notifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications/{notificationId}:
+    get:
+      tags:
+        - Notifications
+      summary: Get notification details
+      description: Retrieve detailed information about a specific notification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  notification:
+                    $ref: '#/components/schemas/Notification'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Notifications
+      summary: Mark notification as read
+      description: Mark a notification as read by the recipient
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification marked as read successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  notification:
+                    $ref: '#/components/schemas/Notification'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to mark this notification as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Notifications
+      summary: Delete notification
+      description: Delete a notification (Recipient only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to delete this notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
