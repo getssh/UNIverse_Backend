@@ -1,0 +1,347 @@
+openapi: 3.0.0
+info:
+  title: UNIverse platform API
+  description: |
+    University management API for the UNIverse platform.
+    This API provides endpoints for managing universities, faculties, departments, and related operations.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: universe.ethiopia@gmail.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    University:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the university
+        name:
+          type: string
+          description: Name of the university
+        description:
+          type: string
+          description: Detailed description of the university
+        location:
+          type: object
+          properties:
+            country:
+              type: string
+              description: Country where the university is located
+            city:
+              type: string
+              description: City where the university is located
+            address:
+              type: string
+              description: Full address of the university
+        logo:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the university logo
+            publicId:
+              type: string
+              description: Cloudinary public ID of the logo
+        website:
+          type: string
+          format: uri
+          description: Official website URL of the university
+        email:
+          type: string
+          format: email
+          description: Official contact email of the university
+        phone:
+          type: string
+          description: Official contact phone number
+        faculties:
+          type: array
+          items:
+            type: string
+            description: Faculty name or ID
+        createdAt:
+          type: string
+          format: date-time
+          description: When the university was added to the platform
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the university was last updated
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /universities:
+    get:
+      tags:
+        - Universities
+      summary: Get all universities
+      description: Retrieve a list of all universities with optional filtering
+      parameters:
+        - name: search
+          in: query
+          description: Search universities by name or description
+          schema:
+            type: string
+        - name: country
+          in: query
+          description: Filter universities by country
+          schema:
+            type: string
+        - name: city
+          in: query
+          description: Filter universities by city
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of universities retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  universities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/University'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Universities
+      summary: Create a new university
+      description: Create a new university (Admin only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+                - country
+                - city
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                country:
+                  type: string
+                city:
+                  type: string
+                address:
+                  type: string
+                website:
+                  type: string
+                  format: uri
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: University created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  university:
+                    $ref: '#/components/schemas/University'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /universities/{universityId}:
+    get:
+      tags:
+        - Universities
+      summary: Get university details
+      description: Retrieve detailed information about a specific university
+      parameters:
+        - name: universityId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: University details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  university:
+                    $ref: '#/components/schemas/University'
+        '404':
+          description: University not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Universities
+      summary: Update university details
+      description: Update university information (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: universityId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                country:
+                  type: string
+                city:
+                  type: string
+                address:
+                  type: string
+                website:
+                  type: string
+                  format: uri
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: University updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  university:
+                    $ref: '#/components/schemas/University'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: University not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Universities
+      summary: Delete university
+      description: Delete a university (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: universityId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: University deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: University not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

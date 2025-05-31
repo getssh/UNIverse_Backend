@@ -84,7 +84,7 @@ const getMembersQueryValidation = [
 router.route('/')
     .post(
         protect,
-        authorize('admin'),
+        authorize(['admin']),
         uploadProfilePic.single('profilePic'),
 
         body('name', 'Channel name is required for creation').trim().notEmpty(),
