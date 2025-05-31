@@ -11,6 +11,14 @@ const cookieParser = require('cookie-parser');
 const http = require('http');
 const { initializeSocket } = require('./socket');
 
+
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const path = require('path');
+
+const swaggerDocumentPath = path.join(__dirname, './api-docs/openapi.yaml');
+const swaggerDocument = YAML.load(swaggerDocumentPath);
+
 connectDB(); 
 
 
@@ -53,6 +61,8 @@ app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/chat-bot', chatBotRoutes);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 const httpServer = http.createServer(app);
 const io = initializeSocket(httpServer);
