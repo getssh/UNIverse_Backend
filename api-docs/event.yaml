@@ -1,0 +1,686 @@
+openapi: 3.0.0
+info:
+  title: UNIverse Event API
+  description: |
+    Event management API for the UNIverse platform.
+    This API provides endpoints for managing events, event attendees, and related operations.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: universe.ethiopia@gmail.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Location:
+      type: object
+      properties:
+        address:
+          type: string
+          description: Physical address of the event
+        city:
+          type: string
+          description: City where the event is held
+        stateOrProvince:
+          type: string
+          description: State or province where the event is held
+        postalCode:
+          type: string
+          description: Postal code of the event location
+        country:
+          type: string
+          description: Country where the event is held
+        isOnline:
+          type: boolean
+          description: Whether the event is online
+          default: false
+        meetingUrl:
+          type: string
+          format: uri
+          description: URL for online meeting
+        locationUrl:
+          type: string
+          format: uri
+          description: URL for physical location
+        additionalDetails:
+          type: string
+          maxLength: 200
+          description: Additional location details
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the event
+        title:
+          type: string
+          maxLength: 150
+          description: Title of the event
+        description:
+          type: string
+          maxLength: 2000
+          description: Detailed description of the event
+        coverImage:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the event cover image
+            publicId:
+              type: string
+              description: Cloudinary public ID of the cover image
+        university:
+          type: string
+          format: uuid
+          description: Reference to the university
+        startDateTime:
+          type: string
+          format: date-time
+          description: Start date and time of the event
+        endDateTime:
+          type: string
+          format: date-time
+          description: End date and time of the event
+        location:
+          $ref: '#/components/schemas/Location'
+        eventType:
+          type: string
+          enum: [workshop, seminar, conference, webinar, social, career_fair, other]
+          description: Type of the event
+        attendees:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of attendee user IDs
+        maxAttendees:
+          type: integer
+          minimum: 1
+          description: Maximum number of attendees allowed
+        registrationDeadline:
+          type: string
+          format: date-time
+          description: Deadline for event registration
+        registrationLink:
+          type: string
+          format: uri
+          description: URL for event registration
+        createdBy:
+          type: string
+          format: uuid
+          description: Reference to the user who created the event
+        organizers:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of organizer user IDs
+        associatedChat:
+          type: string
+          format: uuid
+          description: Reference to the associated chat
+        status:
+          type: string
+          enum: [upcoming, ongoing, past, cancelled, postponed]
+          description: Current status of the event
+        createdAt:
+          type: string
+          format: date-time
+          description: When the event was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the event was last updated
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /events:
+    get:
+      tags:
+        - Events
+      summary: Get events
+      description: Retrieve a list of events with optional filtering
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of events per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: universityId
+          in: query
+          description: Filter events by university ID
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          description: Filter events by type
+          schema:
+            type: string
+            enum: [workshop, seminar, conference, webinar, social, career_fair, other]
+        - name: status
+          in: query
+          description: Filter events by status
+          schema:
+            type: string
+            enum: [upcoming, ongoing, past, cancelled, postponed]
+        - name: isOnline
+          in: query
+          description: Filter events by online status
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          description: Search events by title or description
+          schema:
+            type: string
+        - name: dateRange
+          in: query
+          description: Filter events by date range
+          schema:
+            type: string
+            enum: [next7days]
+        - name: startDate
+          in: query
+          description: Filter events starting from this date
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          description: Filter events until this date
+          schema:
+            type: string
+            format: date-time
+        - name: sort
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [attendees, newest, startDateTime]
+      responses:
+        '200':
+          description: List of events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      totalEvents:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Events
+      summary: Create a new event
+      description: Create a new event
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - university
+                - startDateTime
+                - endDateTime
+                - eventType
+              properties:
+                title:
+                  type: string
+                  maxLength: 150
+                description:
+                  type: string
+                  maxLength: 2000
+                university:
+                  type: string
+                startDateTime:
+                  type: string
+                  format: date-time
+                endDateTime:
+                  type: string
+                  format: date-time
+                location:
+                  type: string
+                  description: JSON string containing location details
+                eventType:
+                  type: string
+                  enum: [workshop, seminar, conference, webinar, social, career_fair, other]
+                maxAttendees:
+                  type: integer
+                  minimum: 1
+                registrationDeadline:
+                  type: string
+                  format: date-time
+                registrationLink:
+                  type: string
+                  format: uri
+                organizers:
+                  type: array
+                  items:
+                    type: string
+                coverImage:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: University not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{eventId}:
+    get:
+      tags:
+        - Events
+      summary: Get event details
+      description: Retrieve detailed information about a specific event
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Event'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Events
+      summary: Update event details
+      description: Update event information (Organizer only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 150
+                description:
+                  type: string
+                  maxLength: 2000
+                university:
+                  type: string
+                startDateTime:
+                  type: string
+                  format: date-time
+                endDateTime:
+                  type: string
+                  format: date-time
+                location:
+                  type: string
+                  description: JSON string containing location details
+                eventType:
+                  type: string
+                  enum: [workshop, seminar, conference, webinar, social, career_fair, other]
+                maxAttendees:
+                  type: integer
+                  minimum: 1
+                registrationDeadline:
+                  type: string
+                  format: date-time
+                registrationLink:
+                  type: string
+                  format: uri
+                organizers:
+                  type: array
+                  items:
+                    type: string
+                coverImage:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Event updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Event'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Events
+      summary: Delete event
+      description: Delete an event (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{eventId}/attend:
+    post:
+      tags:
+        - Events
+      summary: Attend an event
+      description: Register to attend an event
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully registered for the event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to attend
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Events
+      summary: Leave an event
+      description: Cancel attendance for an event
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully cancelled attendance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{eventId}/attendees:
+    get:
+      tags:
+        - Events
+      summary: Get event attendees
+      description: Retrieve list of event attendees
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of attendees per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Event attendees retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      totalAttendees:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        profilePicUrl:
+                          type: string
+                          format: uri
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
