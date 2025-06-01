@@ -1,0 +1,358 @@
+openapi: 3.0.0
+info:
+  title: UNIverse Message API
+  description: |
+    Message management API for the UNIverse platform.
+    This API provides endpoints for managing messages in chats, including file attachments, reactions, and read status.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: universe.ethiopia@gmail.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the message
+        chatId:
+          type: string
+          format: uuid
+          description: Reference to the chat where the message was sent
+        sender:
+          type: string
+          format: uuid
+          description: Reference to the user who sent the message
+        replyTo:
+          type: string
+          format: uuid
+          description: Reference to the message being replied to
+        content:
+          type: string
+          description: Content of the message (required if no file)
+        file:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the file
+            publicId:
+              type: string
+              description: Cloudinary public ID of the file
+            resourceType:
+              type: string
+              enum: [image, video, raw, auto]
+              description: Type of the file resource
+            originalName:
+              type: string
+              description: Original name of the file
+        likes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs who liked the message
+        reactions:
+          type: array
+          items:
+            type: object
+            properties:
+              emoji:
+                type: string
+                enum: ['👍', '❤️', '😂', '😮', '😢', '😠']
+                description: The emoji used in the reaction
+              user:
+                type: string
+                format: uuid
+                description: Reference to the user who reacted
+        isPinned:
+          type: boolean
+          default: false
+          description: Whether the message is pinned
+        isEdited:
+          type: boolean
+          default: false
+          description: Whether the message has been edited
+        readBy:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs who have read the message
+        createdAt:
+          type: string
+          format: date-time
+          description: When the message was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the message was last updated
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /messages:
+    post:
+      tags: [Messages]
+      summary: Send a message
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [chatId]
+              properties:
+                chatId:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+                  maxLength: 2000
+                messageFile:
+                  type: string
+                  format: binary
+                replyTo:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /messages/{chatId}:
+    get:
+      tags: [Messages]
+      summary: Get messages for a chat
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      totalMessages:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid Chat ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /messages/files/{chatId}:
+    get:
+      tags: [Messages]
+      summary: Get files for a chat
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+      responses:
+        '200':
+          description: Files retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  files:
+                    type: array
+                    items:
+                      type: object # (define file schema as needed)
+        '400':
+          description: Invalid Chat ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /messages/{messageId}:
+    post:
+      tags: [Messages]
+      summary: Edit a message
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Message edited successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Message'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Messages]
+      summary: Delete a message
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+      responses:
+        '200':
+          description: Message deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Invalid Message ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /messages/read/{chatId}:
+    put:
+      tags: [Messages]
+      summary: Mark messages as read
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+      responses:
+        '200':
+          description: Messages marked as read successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Invalid Chat ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

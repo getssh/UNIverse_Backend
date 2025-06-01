@@ -26,6 +26,7 @@ const messageRoutes = require('./routes/messageRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const userRoutes = require('./routes/userRoutes');
 const chatBotRoutes = require('./routes/chatBotRoutes');
+const apiDocsRoutes = require('./routes/apiDocsRoutes');
 
 const app = express();
 
@@ -53,6 +54,8 @@ app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/chat-bot', chatBotRoutes);
+app.use('/api/api-docs', apiDocsRoutes);
+
 
 const httpServer = http.createServer(app);
 const io = initializeSocket(httpServer);

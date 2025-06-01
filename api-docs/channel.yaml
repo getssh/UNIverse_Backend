@@ -1,0 +1,610 @@
+openapi: 3.0.0
+info:
+  title: UNIverse Channel API
+  description: |
+    Channel management API for the UNIverse platform.
+    This API provides endpoints for managing channels, including creation, update, deletion, joining, leaving, and member management.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: universe.ethiopia@gmail.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Channel:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the channel
+        name:
+          type: string
+          description: Name of the channel
+          maxLength: 100
+        description:
+          type: string
+          description: Description of the channel
+          maxLength: 500
+        profilePic:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the channel profile picture
+            publicId:
+              type: string
+              description: Cloudinary public ID of the profile picture
+        university:
+          type: string
+          description: Reference to the university
+        admin:
+          type: string
+          description: Reference to the channel admin (user)
+        channelType:
+          type: string
+          enum: [general, official, departmental, course, club, announcement, other]
+          description: Type of the channel
+        members:
+          type: array
+          items:
+            type: string
+          description: List of user IDs who are members
+        isPublic:
+          type: boolean
+          default: true
+          description: Whether the channel is public
+        memberCount:
+          type: integer
+          description: Number of members in the channel
+        createdAt:
+          type: string
+          format: date-time
+          description: When the channel was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the channel was last updated
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /channels:
+    post:
+      tags: [Channels]
+      summary: Create a new channel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, university, channelType]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                university:
+                  type: string
+                channelType:
+                  type: string
+                  enum: [general, official, departmental, course, club, announcement, other]
+                isPublic:
+                  type: boolean
+                profilePic:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Channel created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Channel'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [Channels]
+      summary: Get all channels
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: universityId
+          in: query
+          schema:
+            type: string
+        - name: channelType
+          in: query
+          schema:
+            type: string
+            enum: [general, official, departmental, course, club, announcement, other]
+        - name: member
+          in: query
+          schema:
+            type: string
+            enum: [true, false]
+        - name: rank
+          in: query
+          schema:
+            type: string
+            enum: [members]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, oldest, newest]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of channels retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  hasMore:
+                    type: boolean
+                  pagination:
+                    type: object
+                    properties:
+                      totalChannels:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Channel'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}:
+    get:
+      tags: [Channels]
+      summary: Get a channel by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Channel details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Channel'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}/update:
+    put:
+      tags: [Channels]
+      summary: Update a channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                channelType:
+                  type: string
+                  enum: [general, official, departmental, course, club, announcement, other]
+                isPublic:
+                  type: boolean
+                profilePic:
+                  type: string
+                  format: binary
+                admin:
+                  type: string
+      responses:
+        '200':
+          description: Channel updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Channel'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}/delete:
+    delete:
+      tags: [Channels]
+      summary: Delete a channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Channel deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}/join:
+    post:
+      tags: [Channels]
+      summary: Join a channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Joined channel successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}/leave:
+    post:
+      tags: [Channels]
+      summary: Leave a channel
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Left channel successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/{channelId}/members:
+    get:
+      tags: [Channels]
+      summary: Get channel members
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of channel members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  members:
+                    type: array
+                    items:
+                      type: string
+                  pagination:
+                    type: object
+                    properties:
+                      totalMembers:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+        '404':
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/user/{userId}:
+    get:
+      tags: [Channels]
+      summary: Get channels by user ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of channels for user retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Channel'
+                  pagination:
+                    type: object
+                    properties:
+                      totalChannels:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/non-member/{userId}:
+    get:
+      tags: [Channels]
+      summary: Get non-member channels by user ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of non-member channels for user retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Channel'
+                  pagination:
+                    type: object
+                    properties:
+                      totalChannels:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /channels/search/{query}:
+    get:
+      tags: [Channels]
+      summary: Search channels
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: query
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of channels matching search query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Channel'
+                  pagination:
+                    type: object
+                    properties:
+                      totalChannels:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+        '400':
+          description: Invalid search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
