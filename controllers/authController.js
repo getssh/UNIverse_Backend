@@ -63,6 +63,12 @@ exports.registerUser = async (req, res, next) => {
     session.startTransaction();
 
     let idCardUploadResult;
+    let profilePicData = {
+        url: 'https://res.cloudinary.com/dvtc6coe2/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_gray,b_rgb:262c35/v1747589687/profile_placeholder_hgefwu.jpg',
+        publicId: null
+    };
+    let idCardUrl = null;
+    let idCardPublicId = null;
 
     try {
         const existingUser = await User.findOne({ email: email.toLowerCase() }).session(session);
@@ -71,20 +77,17 @@ exports.registerUser = async (req, res, next) => {
           return res.status(409).json({ success: false, error: 'An account with this email already exists.' });
         }
 
-        let profilePicUrl = null;
-        let idCardUrl = null;
-        let profilePicPublicId = null;
-        let idCardPublicId = null;
-
         const uploadPromises = [];
         if (profilePicFile) {
             console.log("Uploading Profile Picture...");
             uploadPromises.push(
                 uploadToCloudinary(profilePicFile.buffer, profilePicFile.originalname, 'profile_pictures', 'image')
                     .then(result => {
-                         profilePicUrl = result.secure_url;
-                         profilePicPublicId = result.public_id;
-                         console.log("Profile Picture Uploaded:", profilePicUrl);
+                         profilePicData = {
+                            url: result.secure_url,
+                            publicId: result.public_id
+                         };
+                         console.log("Profile Picture Uploaded:", profilePicData.url);
                         })
             );
         }
@@ -105,7 +108,10 @@ exports.registerUser = async (req, res, next) => {
 
         if (!idCardUploadResult || !idCardUploadResult.public_id) {
           await session.abortTransaction(); session.endSession();
-          if (profilePicUrl && profilePicUrl.includes('cloudinary')) { /*remove profile pic*/ }
+          if (profilePicData.publicId) {
+            // Delete profile pic if it was uploaded but registration failed
+            await cloudinary.uploader.destroy(profilePicData.publicId);
+          }
           return res.status(500).json({ success: false, error: 'ID Card upload failed or did not return necessary data.' });
         }
 
@@ -142,7 +148,7 @@ exports.registerUser = async (req, res, next) => {
             studyLevel,
             gender,
             phoneNumber,
-            profilePicUrl: profilePicUrl,
+            profilePicUrl: profilePicData,
             idCardUrl: idCardUrl,
         });
 
@@ -195,8 +201,11 @@ exports.registerUser = async (req, res, next) => {
 
     } catch (error) {
          console.error("Registration Error:", error);
-         // TODO: Implement Cloudinary cleanup on registration failure if necessary
-        next(error);
+         // Clean up any uploaded files if registration fails
+         if (profilePicData.publicId) {
+             await cloudinary.uploader.destroy(profilePicData.publicId);
+         }
+         next(error);
     }
 };
 
@@ -262,7 +271,7 @@ exports.loginUser = async (req, res, next) => {
               name: user.name,
               email: user.email,
               role: user.role,
-              profilePicUrl: user.profilePicUrl
+              profilePicUrl: user.profilePicUrl.url
           }
       });
 

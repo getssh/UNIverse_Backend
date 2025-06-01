@@ -1,0 +1,957 @@
+openapi: 3.0.0
+info:
+  title: UNIverse Post API
+  description: |
+    Post management API for the UNIverse platform.
+    This API provides endpoints for managing posts, including creation, update, deletion, liking, and retrieving posts by various criteria.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: universe.ethiopia@gmail.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the post
+        content:
+          type: string
+          description: Content of the post
+          maxLength: 2000
+        createdBy:
+          type: string
+          format: uuid
+          description: Reference to the user who created the post
+        group:
+          type: string
+          format: uuid
+          description: Reference to the group the post belongs to (if any)
+          nullable: true
+        channel:
+          type: string
+          format: uuid
+          description: Reference to the channel the post belongs to (if any)
+          nullable: true
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                format: uri
+                description: URL of the attached file
+              publicId:
+                type: string
+                description: Cloudinary public ID of the file
+              resourceType:
+                type: string
+                enum: [image, video, raw, auto]
+                description: Type of the file resource
+              originalName:
+                type: string
+                description: Original name of the file
+          description: List of attached files
+        likes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs who liked the post
+        reports:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of report IDs associated with the post
+        isEdited:
+          type: boolean
+          description: Whether the post has been edited
+          default: false
+        likeCount:
+          type: integer
+          description: Number of likes on the post
+          readOnly: true
+        commentCount:
+          type: integer
+          description: Number of comments on the post
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          description: When the post was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the post was last updated
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the comment
+        content:
+          type: string
+          description: Content of the comment
+          maxLength: 500
+        postId:
+          type: string
+          format: uuid
+          description: Reference to the post the comment belongs to
+        createdBy:
+          type: string
+          format: uuid
+          description: Reference to the user who created the comment
+        parentCommentId:
+          type: string
+          format: uuid
+          description: Reference to the parent comment (for replies)
+          nullable: true
+        likes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs who liked the comment
+        isEdited:
+          type: boolean
+          description: Whether the comment has been edited
+          default: false
+        reports:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of report IDs associated with the comment
+        likeCount:
+          type: integer
+          description: Number of likes on the comment
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          description: When the comment was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the comment was last updated
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the report
+        reportedBy:
+          type: string
+          format: uuid
+          description: Reference to the user who created the report
+        targetType:
+          type: string
+          enum: [Post, Group, User, Comment, Channel]
+          description: Type of the reported content
+        targetId:
+          type: string
+          format: uuid
+          description: ID of the reported content
+        reason:
+          type: string
+          description: Reason for the report
+          maxLength: 500
+        resolved:
+          type: boolean
+          description: Whether the report has been resolved
+          default: false
+        resolvedBy:
+          type: string
+          format: uuid
+          description: Reference to the admin who resolved the report
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          description: When the report was resolved
+          nullable: true
+        actionTaken:
+          type: string
+          enum: [content_removed, user_warned, user_banned, account_deactivated, no_action_needed, other]
+          description: Action taken on the reported content/user
+          nullable: true
+        adminNotes:
+          type: string
+          description: Notes added by the admin resolving the report
+          maxLength: 1000
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          description: When the report was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the report was last updated
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /posts:
+    post:
+      tags: [Posts]
+      summary: Create a new post
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  maxLength: 2000
+                  description: Text content of the post (required if no files)
+                groupId:
+                  type: string
+                  format: uuid
+                  description: ID of the group if the post belongs to one
+                channelId:
+                  type: string
+                  format: uuid
+                  description: ID of the channel if the post belongs to one
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  maxItems: 5
+                  description: Array of files to attach (max 5)
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Post'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Group or Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [Posts]
+      summary: Get all posts
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of all posts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      totalPosts:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Post'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/{postId}:
+    get:
+      tags: [Posts]
+      summary: Get a post by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the post to retrieve
+      responses:
+        '200':
+          description: Post details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Post'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Posts]
+      summary: Update a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the post to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  maxLength: 2000
+                  description: New content for the post
+      responses:
+        '200':
+          description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Post'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to update this post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Posts]
+      summary: Delete a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the post to delete
+      responses:
+        '200':
+          description: Post deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to delete this post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/channel/{channelId}:
+    get:
+      tags: [Posts]
+      summary: Get posts by channel ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the channel to get posts from
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of posts for channel retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      totalPosts:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Post'
+        '400':
+          description: Invalid Channel ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/channels/allChannels:
+    get:
+      tags: [Posts]
+      summary: Get posts from all channels
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of posts from all channels retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      totalPosts:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Post'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/{postId}/like:
+    post:
+      tags: [Posts]
+      summary: Like a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the post to like/unlike
+      responses:
+        '200':
+          description: Post liked/unliked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  likeCount:
+                    type: integer
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /posts/{postId}/comments:
+    get:
+      tags: [Comments]
+      summary: Get comments for a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the post to get comments for
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Comments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  pagination:
+                    type: object
+                    properties:
+                      totalComments:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
+                        type: integer
+                      limit:
+                        type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Comments]
+      summary: Create a comment on a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the post to comment on
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  maxLength: 1000
+                  description: Content of the comment
+                parentCommentId:
+                  type: string
+                  format: uuid
+                  description: ID of the parent comment if this is a reply
+                  nullable: true
+      responses:
+        '201':
+          description: Comment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Comment'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /comments/{commentId}:
+    put:
+      tags: [Comments]
+      summary: Update a comment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the comment to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  maxLength: 1000
+                  description: New content for the comment
+      responses:
+        '200':
+          description: Comment updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Comment'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to update this comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post or Comment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Comments]
+      summary: Delete a comment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the post the comment belongs to
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            # format: uuid
+          description: ID of the comment to delete
+      responses:
+        '200':
+          description: Comment deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to delete this comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Post or Comment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reports:
+    post:
+      tags: [Reports]
+      summary: Report a post, group, user, comment, or channel
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, targetId, reason]
+              properties:
+                targetType:
+                  type: string
+                  enum: [Post, Group, User, Comment, Channel]
+                  description: Type of the reported content
+                targetId:
+                  type: string
+                  format: uuid
+                  description: ID of the reported content
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: Reason for reporting the content
+      responses:
+        '201':
+          description: Content reported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Report'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Target content not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Content already reported by this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

@@ -1,0 +1,391 @@
+openapi: 3.0.0
+info:
+  title: UNIverse Chat API
+  description: |
+    Chat management API for the UNIverse platform.
+    This API provides endpoints for managing one-on-one chats, group chats, and event chats.
+  version: 1.0.0
+  contact:
+    name: UNIverse Support
+    email: universe.ethiopia@gmail.com
+
+servers:
+  - url: https://universe-backend-kpry.onrender.com/api
+    description: Production server
+  - url: http://localhost:5000/api
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Chat:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the chat
+        chatType:
+          type: string
+          enum: [one_on_one, group, event_chat]
+          description: Type of chat
+          default: one_on_one
+        name:
+          type: string
+          description: Name of the chat (for group chats)
+        participants:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of user IDs participating in the chat
+        group:
+          type: string
+          format: uuid
+          description: Reference to the group (required for group chats)
+        event:
+          type: string
+          format: uuid
+          description: Reference to the event (required for event chats)
+        lastMessage:
+          $ref: '#/components/schemas/Message'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the chat was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the chat was last updated
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the message
+        chatId:
+          type: string
+          format: uuid
+          description: Reference to the chat
+        sender:
+          type: string
+          format: uuid
+          description: Reference to the user who sent the message
+        content:
+          type: string
+          description: Content of the message
+        file:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the file
+            publicId:
+              type: string
+              description: Cloudinary public ID
+            resourceType:
+              type: string
+              enum: [image, video, raw, auto]
+              description: Type of the file resource
+        createdAt:
+          type: string
+          format: date-time
+          description: When the message was sent
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the message was last updated
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Field that caused the error
+              message:
+                type: string
+                description: Error message
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          description: Success message
+
+paths:
+  /chats/one-on-one:
+    post:
+      tags:
+        - Chats
+      summary: Create a one-on-one chat
+      description: Create or get an existing one-on-one chat with another user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientId
+              properties:
+                recipientId:
+                  type: string
+                  format: uuid
+                  description: ID of the user to chat with
+      responses:
+        '201':
+          description: Chat created/retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Chat'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chats:
+    get:
+      tags:
+        - Chats
+      summary: Get user chats
+      description: Retrieve a list of all chats for the authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of chats per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: List of chats retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Chat'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chats/{chatId}:
+    get:
+      tags:
+        - Chats
+      summary: Get chat by ID
+      description: Retrieve a specific chat by its ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          description: ID of the chat to retrieve
+          schema:
+            type: string
+            # format: uuid
+      responses:
+        '200':
+          description: Chat retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Chat'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Chat not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    # delete:
+    #   tags:
+    #     - Chats
+    #   summary: Delete chat
+    #   description: Delete a chat (Admin only for group chats)
+    #   security:
+    #     - BearerAuth: []
+    #   parameters:
+    #     - name: chatId
+    #       in: path
+    #       required: true
+    #       schema:
+    #         type: string
+    #   responses:
+    #     '200':
+    #       description: Chat deleted successfully
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: '#/components/schemas/Success'
+    #     '401':
+    #       description: Not authenticated
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: '#/components/schemas/Error'
+    #     '403':
+    #       description: Not authorized
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: '#/components/schemas/Error'
+    #     '404':
+    #       description: Chat not found
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: '#/components/schemas/Error'
+
+  /messages/{chatId}:
+    get:
+      tags:
+        - Messages
+      summary: Get chat messages
+      description: Retrieve messages for a specific chat
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Get messages on page
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of messages to retrieve
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Chat not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
