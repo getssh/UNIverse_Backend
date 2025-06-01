@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: UNIverse platform API
+  title: UNIverse University API
   description: |
     University management API for the UNIverse platform.
     This API provides endpoints for managing universities, faculties, departments, and related operations.

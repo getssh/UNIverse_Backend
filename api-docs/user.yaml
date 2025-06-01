@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: UNIverse Backend API
+  title: UNIverse User API
   description: |
     Backend API for the UNIverse platform - A university social platform connecting students and teachers.
     This API provides endpoints for user authentication, profile management, university operations, and more.
