@@ -33,49 +33,99 @@ components:
         name:
           type: string
           description: Name of the group
+          maxLength: 100
         description:
           type: string
           description: Detailed description of the group
-        type:
-          type: string
-          enum: [study, project, research]
-          description: Type of the group
-        university:
-          type: string
-          format: uuid
-          description: Reference to the university
-        faculty:
-          type: string
-          format: uuid
-          description: Reference to the faculty
-        department:
-          type: string
-          format: uuid
-          description: Reference to the department
-        course:
-          type: string
-          format: uuid
-          description: Reference to the course
-        coverImage:
+          maxLength: 1000
+        profilePic:
           type: object
           properties:
             url:
               type: string
               format: uri
-              description: URL of the group cover image
+              description: URL of the group profile picture
             publicId:
               type: string
-              description: Cloudinary public ID of the cover image
-        maxMembers:
-          type: integer
-          description: Maximum number of members allowed in the group
-        isPrivate:
-          type: boolean
-          description: Whether the group is private (requires invitation)
+              description: Cloudinary public ID of the profile picture
+        coverPhoto:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the group cover photo
+            publicId:
+              type: string
+              description: Cloudinary public ID of the cover photo
+        createdBy:
+          type: string
+          format: uuid
+          description: Reference to the user who created the group
+        admins:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of admin user IDs
+        moderators:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of moderator user IDs
         members:
           type: array
           items:
-            $ref: '#/components/schemas/GroupMember'
+            type: string
+            format: uuid
+          description: List of member user IDs
+        groupType:
+          type: string
+          enum: [student, faculty, general, course_specific, club_organization, other]
+          description: Type of the group
+        privacy:
+          type: string
+          enum: [public, private, university_only, faculty_only, students_only]
+          description: Privacy setting of the group
+        university:
+          type: string
+          format: uuid
+          description: Reference to the university
+        rules:
+          type: array
+          items:
+            type: string
+            maxLength: 500
+          description: List of group rules
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          description: List of group tags
+        status:
+          type: string
+          enum: [active, inactive, archived, under_review]
+          description: Current status of the group
+        joinRequests:
+          type: array
+          items:
+            type: object
+            properties:
+              user:
+                type: string
+                format: uuid
+              requestedAt:
+                type: string
+                format: date-time
+              message:
+                type: string
+                maxLength: 200
+        associatedChat:
+          type: string
+          format: uuid
+          description: Reference to the associated chat
         createdAt:
           type: string
           format: date-time
@@ -84,54 +134,6 @@ components:
           type: string
           format: date-time
           description: When the group was last updated
-
-    GroupMember:
-      type: object
-      properties:
-        user:
-          type: string
-          format: uuid
-          description: Reference to the user
-        role:
-          type: string
-          enum: [member, moderator, admin]
-          description: Role of the user in the group
-        joinedAt:
-          type: string
-          format: date-time
-          description: When the user joined the group
-
-    GroupInvitation:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier for the invitation
-        group:
-          type: string
-          format: uuid
-          description: Reference to the group
-        inviter:
-          type: string
-          format: uuid
-          description: Reference to the user who sent the invitation
-        invitee:
-          type: string
-          format: uuid
-          description: Reference to the user who was invited
-        status:
-          type: string
-          enum: [pending, accepted, rejected]
-          description: Status of the invitation
-        createdAt:
-          type: string
-          format: date-time
-          description: When the invitation was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: When the invitation was last updated
 
     Error:
       type: object
@@ -168,30 +170,26 @@ paths:
           description: Filter groups by type
           schema:
             type: string
-            enum: [study, project, research]
-        - name: university
+            enum: [student, faculty, general, course_specific, club_organization, other]
+        - name: privacy
+          in: query
+          description: Filter groups by privacy setting
+          schema:
+            type: string
+            enum: [public, private, university_only, faculty_only, students_only]
+        - name: universityId
           in: query
           description: Filter groups by university ID
           schema:
             type: string
-        - name: faculty
+        - name: tag
           in: query
-          description: Filter groups by faculty ID
-          schema:
-            type: string
-        - name: department
-          in: query
-          description: Filter groups by department ID
-          schema:
-            type: string
-        - name: course
-          in: query
-          description: Filter groups by course ID
+          description: Filter groups by tag
           schema:
             type: string
         - name: search
           in: query
-          description: Search groups by name or description
+          description: Search groups by name
           schema:
             type: string
         - name: page
@@ -206,6 +204,13 @@ paths:
           schema:
             type: integer
             default: 10
+            maximum: 100
+        - name: sort
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [members, name, createdAt]
       responses:
         '200':
           description: List of groups retrieved successfully
@@ -217,21 +222,23 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  groups:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Group'
+                  count:
+                    type: integer
                   pagination:
                     type: object
                     properties:
-                      page:
+                      totalGroups:
+                        type: integer
+                      totalPages:
+                        type: integer
+                      currentPage:
                         type: integer
                       limit:
                         type: integer
-                      total:
-                        type: integer
-                      pages:
-                        type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Group'
         '401':
           description: Not authenticated
           content:
@@ -243,7 +250,7 @@ paths:
       tags:
         - Groups
       summary: Create a new group
-      description: Create a new study group
+      description: Create a new group
       security:
         - BearerAuth: []
       requestBody:
@@ -254,30 +261,37 @@ paths:
               type: object
               required:
                 - name
-                - description
-                - type
-                - university
+                - groupType
+                - privacy
               properties:
                 name:
                   type: string
+                  maxLength: 100
                 description:
                   type: string
-                type:
+                  maxLength: 1000
+                groupType:
                   type: string
-                  enum: [study, project, research]
+                  enum: [student, faculty, general, course_specific, club_organization, other]
+                privacy:
+                  type: string
+                  enum: [public, private, university_only, faculty_only, students_only]
                 university:
                   type: string
-                faculty:
+                rules:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 500
+                tags:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 50
+                profilePic:
                   type: string
-                department:
-                  type: string
-                course:
-                  type: string
-                maxMembers:
-                  type: integer
-                isPrivate:
-                  type: boolean
-                coverImage:
+                  format: binary
+                coverPhoto:
                   type: string
                   format: binary
       responses:
@@ -291,7 +305,7 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  group:
+                  data:
                     $ref: '#/components/schemas/Group'
         '400':
           description: Invalid input
@@ -301,6 +315,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Group name already exists
           content:
             application/json:
               schema:
@@ -331,10 +351,16 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  group:
+                  data:
                     $ref: '#/components/schemas/Group'
         '401':
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to view this group
           content:
             application/json:
               schema:
@@ -350,7 +376,7 @@ paths:
       tags:
         - Groups
       summary: Update group details
-      description: Update group information (Admin/Moderator only)
+      description: Update group information (Admin only)
       security:
         - BearerAuth: []
       parameters:
@@ -368,13 +394,32 @@ paths:
               properties:
                 name:
                   type: string
+                  maxLength: 100
                 description:
                   type: string
-                maxMembers:
-                  type: integer
-                isPrivate:
-                  type: boolean
-                coverImage:
+                  maxLength: 1000
+                groupType:
+                  type: string
+                  enum: [student, faculty, general, course_specific, club_organization, other]
+                privacy:
+                  type: string
+                  enum: [public, private, university_only, faculty_only, students_only]
+                university:
+                  type: string
+                rules:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 500
+                tags:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 50
+                profilePic:
+                  type: string
+                  format: binary
+                coverPhoto:
                   type: string
                   format: binary
       responses:
@@ -388,7 +433,7 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  group:
+                  data:
                     $ref: '#/components/schemas/Group'
         '401':
           description: Not authenticated
@@ -448,23 +493,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /groups/{groupId}/members:
+  /groups/user/{userId}:
     get:
       tags:
-        - Group Members
-      summary: Get group members
-      description: Retrieve all members of a specific group
+        - Groups
+      summary: Get user's groups
+      description: Retrieve all groups that a user is a member of
       security:
         - BearerAuth: []
       parameters:
-        - name: groupId
+        - name: userId
           in: path
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Group members retrieved successfully
+          description: User's groups retrieved successfully
           content:
             application/json:
               schema:
@@ -473,12 +518,147 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  members:
+                  data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/GroupMember'
+                      $ref: '#/components/schemas/Group'
         '401':
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/user/{userId}/created:
+    get:
+      tags:
+        - Groups
+      summary: Get user's created groups
+      description: Retrieve all groups created by a user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User's created groups retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Group'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/user/{userId}/non-member:
+    get:
+      tags:
+        - Groups
+      summary: Get non-member groups
+      description: Retrieve all groups that a user is not a member of
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Non-member groups retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Group'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/{groupId}/join:
+    post:
+      tags:
+        - Groups
+      summary: Join or request to join a group
+      description: Join a public group or request to join a private group
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  maxLength: 200
+                  description: Optional message for join request
+      responses:
+        '200':
+          description: Successfully joined or requested to join the group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to join
           content:
             application/json:
               schema:
@@ -490,11 +670,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-    post:
+  /groups/{groupId}/leave:
+    delete:
       tags:
-        - Group Members
-      summary: Add member to group
-      description: Add a new member to the group (Admin/Moderator only)
+        - Groups
+      summary: Leave a group
+      description: Leave a group as a member
       security:
         - BearerAuth: []
       parameters:
@@ -503,25 +684,49 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - userId
-                - role
-              properties:
-                userId:
-                  type: string
-                  format: uuid
-                role:
-                  type: string
-                  enum: [member, moderator]
       responses:
-        '201':
-          description: Member added successfully
+        '200':
+          description: Successfully left the group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to leave
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/{groupId}/join-requests:
+    get:
+      tags:
+        - Groups
+      summary: Get join requests
+      description: Get all pending join requests for a group (Admin/Moderator only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Join requests retrieved successfully
           content:
             application/json:
               schema:
@@ -530,8 +735,19 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  member:
-                    $ref: '#/components/schemas/GroupMember'
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user:
+                          type: string
+                          format: uuid
+                        requestedAt:
+                          type: string
+                          format: date-time
+                        message:
+                          type: string
         '401':
           description: Not authenticated
           content:
@@ -551,117 +767,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /groups/{groupId}/invitations:
-    get:
-      tags:
-        - Group Invitations
-      summary: Get group invitations
-      description: Retrieve all invitations for a specific group
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: status
-          in: query
-          description: Filter invitations by status
-          schema:
-            type: string
-            enum: [pending, accepted, rejected]
-      responses:
-        '200':
-          description: Group invitations retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  invitations:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/GroupInvitation'
-        '401':
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Group not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      tags:
-        - Group Invitations
-      summary: Send group invitation
-      description: Send an invitation to join the group (Admin/Moderator only)
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - inviteeId
-              properties:
-                inviteeId:
-                  type: string
-                  format: uuid
-      responses:
-        '201':
-          description: Invitation sent successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  invitation:
-                    $ref: '#/components/schemas/GroupInvitation'
-        '401':
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Not authorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Group not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /groups/{groupId}/invitations/{invitationId}:
+  /groups/{groupId}/join-requests/{requestId}:
     put:
       tags:
-        - Group Invitations
-      summary: Respond to invitation
-      description: Accept or reject a group invitation
+        - Groups
+      summary: Manage join request
+      description: Approve or reject a join request (Admin/Moderator only)
       security:
         - BearerAuth: []
       parameters:
@@ -670,7 +781,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: invitationId
+        - name: requestId
           in: path
           required: true
           schema:
@@ -682,24 +793,18 @@ paths:
             schema:
               type: object
               required:
-                - status
+                - action
               properties:
-                status:
+                action:
                   type: string
-                  enum: [accepted, rejected]
+                  enum: [approve, reject]
       responses:
         '200':
-          description: Invitation response processed successfully
+          description: Join request managed successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  invitation:
-                    $ref: '#/components/schemas/GroupInvitation'
+                $ref: '#/components/schemas/Success'
         '401':
           description: Not authenticated
           content:
@@ -707,13 +812,148 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Not authorized to respond to this invitation
+          description: Not authorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Group or invitation not found
+          description: Group or request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/{groupId}/members/{memberId}/promote-admin:
+    put:
+      tags:
+        - Groups
+      summary: Promote member to admin
+      description: Promote a member to admin role (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Member promoted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Group or member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/{groupId}/members/{memberId}/promote-moderator:
+    put:
+      tags:
+        - Groups
+      summary: Promote member to moderator
+      description: Promote a member to moderator role (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Member promoted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Group or member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /groups/{groupId}/members/{memberIdToKick}/kick:
+    delete:
+      tags:
+        - Groups
+      summary: Kick member from group
+      description: Remove a member from the group (Admin/Moderator only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: memberIdToKick
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Member kicked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Group or member not found
           content:
             application/json:
               schema:
