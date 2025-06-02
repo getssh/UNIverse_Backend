@@ -30,6 +30,12 @@ exports.getUserDetails = async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        department: user.department,
+        faculty: user.faculty,
+        studyLevel: user.studyLevel,
+        gender: user.gender,
+        phoneNumber: user.phoneNumber,
+        interests: user.interests,
         profilePicUrl: user.profilePicUrl,
       }
     });
@@ -65,13 +71,27 @@ exports.updateUser = async (req, res, next) => {
   });
 
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select('+password');
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
     if (req.user.id !== userId && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, error: 'Not authorized to update this user' });
+    }
+
+    if (req.body.currentPassword && req.body.newPassword) {
+      const { currentPassword, newPassword } = req.body;
+      
+      const isPasswordValid = await user.comparePassword(currentPassword);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          error: 'Current password is incorrect'
+        });
+      }
+
+      updates.password = newPassword;
     }
 
     if (profilePicFile || removeProfilePic) {
@@ -116,6 +136,8 @@ exports.updateUser = async (req, res, next) => {
     Object.assign(user, updates);
     await user.save();
 
+    const { password, ...updatesWithoutPassword } = updates;
+
     res.status(200).json({
       success: true,
       user: {
@@ -124,7 +146,7 @@ exports.updateUser = async (req, res, next) => {
         email: user.email,
         role: user.role,
         profilePicUrl: user.profilePicUrl.url,
-        ...updates
+        ...updatesWithoutPassword
       }
     });
   } catch (error) {
