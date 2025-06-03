@@ -246,9 +246,10 @@ exports.getEvents = async (req, res, next) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
-    let sort = { startDateTime: 1 };
+    let sort = { createdAt: -1 };
     if (req.query.sort === 'attendees') sort = { attendeeCountVirtual: -1 };
     else if (req.query.sort === 'newest') sort = { createdAt: -1 };
+    else if (req.query.sort === 'upcoming') sort = { startDateTime: 1 };
 
     const events = await Event.find(filter)
         .populate('createdBy', 'name profilePicUrl')
