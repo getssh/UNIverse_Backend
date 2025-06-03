@@ -62,7 +62,8 @@ const jobSchema = new mongoose.Schema(
             match: [
                 /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
                 'Please provide a valid URL'
-            ]
+            ],
+            default: 'https://www.hahu.jobs/'
         },
         postedBy: {
             type: mongoose.Schema.ObjectId,
