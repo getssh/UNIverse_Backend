@@ -3,12 +3,23 @@ const jwt = require('jsonwebtoken');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const authController = require('../../controllers/authController');
 const User = require('../../models/User');
+const University = require('../../models/University');
 
 jest.mock('../../utils/emailSender');
 jest.mock('../../utils/cloudinaryUploader');
 jest.mock('../../utils/ocrUtils');
 
 let mongoServer;
+let testUniversity;
+
+const setupTestUniversity = async () => {
+  return await University.create({
+    name: 'Test University',
+    location: 'Test Location',
+    website: 'https://testuniversity.edu',
+    description: 'Test University Description'
+  });
+};
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
@@ -22,35 +33,41 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await User.deleteMany({});
+  await University.deleteMany({});
+  testUniversity = await setupTestUniversity();
   jest.clearAllMocks();
 });
 
 describe('Auth Controller', () => {
   describe('registerUser', () => {
-    const mockRequest = {
-      body: {
-        name: 'Test User',
-        email: 'test@example.com',
-        password: 'password123',
-        role: 'student',
-        university: 'Test University',
-        department: 'Computer Science',
-        faculty: 'Engineering',
-        studyLevel: 'Undergraduate',
-        gender: 'Male',
-        phoneNumber: '1234567890'
-      },
-      files: {
-        profilePic: [{
-          buffer: Buffer.from('test'),
-          originalname: 'test.jpg'
-        }],
-        idCard: [{
-          buffer: Buffer.from('test'),
-          originalname: 'test.jpg'
-        }]
-      }
-    };
+    let mockRequest;
+
+    beforeEach(() => {
+      mockRequest = {
+        body: {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+          role: 'student',
+          university: testUniversity._id.toString(),
+          department: 'Computer Science',
+          faculty: 'Engineering',
+          studyLevel: 'undergraduate',
+          gender: 'male',
+          phoneNumber: '1234567890'
+        },
+        files: {
+          profilePic: [{
+            buffer: Buffer.from('test'),
+            originalname: 'test.jpg'
+          }],
+          idCard: [{
+            buffer: Buffer.from('test'),
+            originalname: 'test.jpg'
+          }]
+        }
+      };
+    });
 
     const mockResponse = () => {
       const res = {};
@@ -123,11 +140,11 @@ describe('Auth Controller', () => {
         email: 'test@example.com',
         password: 'password123',
         role: 'student',
-        university: 'Test University',
+        university: testUniversity._id,
         department: 'Computer Science',
         faculty: 'Engineering',
-        studyLevel: 'Undergraduate',
-        gender: 'Male',
+        studyLevel: 'undergraduate',
+        gender: 'male',
         phoneNumber: '1234567890',
         isEmailVerified: true,
         accountStatus: 'active',
@@ -194,11 +211,11 @@ describe('Auth Controller', () => {
         email: 'test@example.com',
         password: 'password123',
         role: 'student',
-        university: 'Test University',
+        university: testUniversity._id,
         department: 'Computer Science',
         faculty: 'Engineering',
-        studyLevel: 'Undergraduate',
-        gender: 'Male',
+        studyLevel: 'undergraduate',
+        gender: 'male',
         phoneNumber: '1234567890',
         verificationToken: 'hashed_token',
         verificationTokenExpires: Date.now() + 3600000,
